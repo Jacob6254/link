@@ -1,17 +1,17 @@
 // app/api/admin/links/route.js
 import { sb } from "@/lib/db";
-import { isAdmin, unauthorized } from "@/lib/auth";
+import { requireAdmin, unauthorized } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request) {
-  if (!isAdmin(request)) return unauthorized();
+  if (!(await requireAdmin(request))) return unauthorized();
   const links = await sb("/links?select=*&order=sort_order.asc,id.asc");
   return Response.json(links);
 }
 
 export async function POST(request) {
-  if (!isAdmin(request)) return unauthorized();
+  if (!(await requireAdmin(request))) return unauthorized();
   const body = await request.json().catch(() => ({}));
   const slug = String(body.slug || "").trim().toLowerCase();
   const label = String(body.label || "").trim();

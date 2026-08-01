@@ -1,11 +1,11 @@
 // app/api/admin/stats/route.js
 import { sb } from "@/lib/db";
-import { isAdmin, unauthorized } from "@/lib/auth";
+import { requireAdmin, unauthorized } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request) {
-  if (!isAdmin(request)) return unauthorized();
+  if (!(await requireAdmin(request))) return unauthorized();
 
   // Volume perso : on agrège en JS sur les 5000 derniers clics.
   const clicks = await sb(

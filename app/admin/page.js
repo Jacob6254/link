@@ -1,15 +1,18 @@
 // app/admin/page.js
 "use client";
-// Interface d'administration : connexion, gestion des liens, statistiques.
+// Interface d'administration : gestion des liens, profils, statistiques.
+// L'accès est protégé par le middleware (session admin requise).
 import { useCallback, useEffect, useState } from "react";
 
 export default function Admin() {
-  const [authed, setAuthed] = useState(null); // null = en cours de vérification
-  const [password, setPassword] = useState("");
+  const [loaded, setLoaded] = useState(false);
   const [links, setLinks] = useState([]);
+  const [users, setUsers] = useState([]);
   const [stats, setStats] = useState(null);
   const [form, setForm] = useState({ slug: "", label: "", web_url: "" });
+  const [userForm, setUserForm] = useState({ username: "", password: "", role: "viewer" });
   const [error, setError] = useState("");
+  const [userError, setUserError] = useState("");
   const [origin, setOrigin] = useState("");
 
   useEffect(() => {
@@ -18,34 +21,23 @@ export default function Admin() {
 
   const load = useCallback(async () => {
     const res = await fetch("/api/admin/links");
-    if (res.status === 401) {
-      setAuthed(false);
+    if (res.status === 401 || res.status === 403) {
+      window.location.href = "/login?next=/admin";
       return;
     }
-    setAuthed(true);
     setLinks(await res.json());
-    const s = await fetch("/api/admin/stats");
+    setLoaded(true);
+    const [s, u] = await Promise.all([
+      fetch("/api/admin/stats"),
+      fetch("/api/admin/users"),
+    ]);
     if (s.ok) setStats(await s.json());
+    if (u.ok) setUsers(await u.json());
   }, []);
 
   useEffect(() => {
     load();
   }, [load]);
-
-  async function login() {
-    setError("");
-    const res = await fetch("/api/admin/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password }),
-    });
-    if (!res.ok) {
-      setError("Mot de passe incorrect");
-      return;
-    }
-    setPassword("");
-    load();
-  }
 
   async function createLink() {
     setError("");
@@ -69,32 +61,45 @@ export default function Admin() {
     load();
   }
 
+  async function createUser() {
+    setUserError("");
+    const res = await fetch("/api/admin/users", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(userForm),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      setUserError(data.error || "Erreur");
+      return;
+    }
+    setUserForm({ username: "", password: "", role: "viewer" });
+    load();
+  }
+
+  async function removeUser(id, username) {
+    if (!confirm(`Supprimer le profil « ${username} » ?`)) return;
+    const res = await fetch(`/api/admin/users/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setUserError(data.error || "Erreur");
+      return;
+    }
+    load();
+  }
+
   function copyGoUrl(slug) {
     navigator.clipboard.writeText(`${origin}/go/${slug}`);
   }
 
-  if (authed === null) return <main className="admin"><p>Chargement…</p></main>;
-
-  if (authed === false) {
-    return (
-      <main className="admin admin-login">
-        <h1>Admin</h1>
-        <input
-          type="password"
-          placeholder="Mot de passe"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && login()}
-        />
-        <button onClick={login}>Se connecter</button>
-        {error && <p className="error">{error}</p>}
-      </main>
-    );
-  }
+  if (!loaded) return <main className="admin"><p>Chargement…</p></main>;
 
   return (
     <main className="admin">
-      <h1>Mes liens</h1>
+      <div className="topbar">
+        <h1>Mes liens</h1>
+        <a className="logout" href="/api/logout">Se déconnecter</a>
+      </div>
 
       <section className="card">
         <h2>Ajouter un lien</h2>
@@ -148,6 +153,56 @@ export default function Admin() {
         <p className="hint">
           Lien à mettre dans votre bio Instagram : <span className="mono">{origin}</span> (la
           page avec tous les boutons) — ou un lien direct <span className="mono">{origin}/go/slug</span>.
+        </p>
+      </section>
+
+      <section className="card">
+        <h2>Profils</h2>
+        <div className="form-grid">
+          <input
+            placeholder="Identifiant (ex: paul)"
+            autoComplete="off"
+            value={userForm.username}
+            onChange={(e) => setUserForm({ ...userForm, username: e.target.value })}
+          />
+          <input
+            type="password"
+            placeholder="Mot de passe (6 caractères min.)"
+            autoComplete="new-password"
+            value={userForm.password}
+            onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
+          />
+          <select
+            value={userForm.role}
+            onChange={(e) => setUserForm({ ...userForm, role: e.target.value })}
+          >
+            <option value="viewer">Visiteur — voit la page de liens</option>
+            <option value="admin">Admin — accès à cette page</option>
+          </select>
+          <button onClick={createUser}>Créer le profil</button>
+        </div>
+        {userError && <p className="error">{userError}</p>}
+        <ul className="link-list">
+          {users.map((u) => (
+            <li key={u.id}>
+              <div>
+                <strong>{u.username}</strong>{" "}
+                <span className={u.role === "admin" ? "badge badge-admin" : "badge"}>
+                  {u.role === "admin" ? "admin" : "visiteur"}
+                </span>
+              </div>
+              <div className="actions">
+                <button className="danger" onClick={() => removeUser(u.id, u.username)}>
+                  Supprimer
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+        <p className="hint">
+          Le compte de secours <span className="mono">admin</span> (mot de passe
+          ADMIN_PASSWORD dans les variables d&apos;environnement) fonctionne toujours,
+          même sans profil créé.
         </p>
       </section>
 
