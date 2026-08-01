@@ -25,7 +25,9 @@ export async function middleware(request) {
   }
 
   const needsAdmin =
-    pathname.startsWith("/api/admin") || pathname.startsWith("/dashboard/profiles");
+    pathname.startsWith("/api/admin") ||
+    pathname.startsWith("/dashboard/profiles") ||
+    pathname.startsWith("/dashboard/settings");
   if (needsAdmin && session.role !== "admin") {
     if (pathname.startsWith("/api/")) {
       return Response.json({ error: "Accès réservé aux admins" }, { status: 403 });

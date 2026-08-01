@@ -78,8 +78,9 @@ export default function GroupsPage() {
         </div>
         {error && <p className="error">{error}</p>}
         <p className="hint">
-          Les groupes forment des sections sur la page bio : les liens d&apos;un même
-          groupe s&apos;affichent ensemble, sous le nom du groupe.
+          Les groupes servent à ranger vos liens (ex : « Compte principal »,
+          « Client X ») : ils classent la liste « Mes liens » et donnent une
+          répartition des clics par groupe dans les statistiques.
         </p>
       </section>
 

@@ -8,15 +8,18 @@ const NAV = [
   { href: "/dashboard/stats", label: "Statistiques", icon: "📊" },
 ];
 
+const ADMIN_NAV = [
+  { href: "/dashboard/profiles", label: "Profils", icon: "👥" },
+  { href: "/dashboard/settings", label: "Réglages", icon: "⚙️" },
+];
+
 export default function Sidebar({ role, username }) {
   const pathname = usePathname();
-  const items = role === "admin"
-    ? [...NAV, { href: "/dashboard/profiles", label: "Profils", icon: "👥" }]
-    : NAV;
+  const items = role === "admin" ? [...NAV, ...ADMIN_NAV] : NAV;
 
   return (
     <aside className="sidebar">
-      <a className="sidebar-brand" href="/" title="Voir la page bio">
+      <a className="sidebar-brand" href="/dashboard">
         <span className="brand-dot" aria-hidden="true" />
         <span className="brand-name">Mes liens</span>
       </a>
@@ -35,10 +38,6 @@ export default function Sidebar({ role, username }) {
       </nav>
 
       <div className="sidebar-foot">
-        <a className="nav-item" href="/" title="Page bio publique">
-          <span className="nav-icon" aria-hidden="true">🌐</span>
-          <span className="nav-label">Voir la page</span>
-        </a>
         <div className="sidebar-user">
           <span className="user-avatar" aria-hidden="true">
             {(username[0] || "?").toUpperCase()}

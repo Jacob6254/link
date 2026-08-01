@@ -125,7 +125,7 @@ export default function StatsPage() {
   if (error) return <main className="panel"><p className="error">{error}</p></main>;
   if (!stats) return <main className="panel"><p className="hint">Chargement…</p></main>;
 
-  const { total, byDay, byLink, byPlatform, byCountry, windowDays, capped } = stats;
+  const { total, byDay, byLink, byPlatform, byCountry, byGroup = [], windowDays, capped } = stats;
   const bestLink = byLink[0];
   const bestCountry = byCountry[0];
   const platEntries = Object.entries(byPlatform).sort(([, a], [, b]) => b - a);
@@ -133,6 +133,9 @@ export default function StatsPage() {
   const maxPlat = Math.max(1, ...platEntries.map(([, n]) => n));
   const maxCountry = Math.max(1, ...byCountry.map((c) => c.total));
   const maxLink = Math.max(1, ...byLink.map((l) => l.total));
+  const maxGroup = Math.max(1, ...byGroup.map((g) => g.total));
+  // Un seul groupe "Sans groupe" = rien à comparer, on masque la section.
+  const showGroups = byGroup.length > 1 || (byGroup[0] && byGroup[0].name !== "Sans groupe");
 
   return (
     <main className="panel">
@@ -206,6 +209,19 @@ export default function StatsPage() {
           </p>
         </section>
       </div>
+
+      {showGroups && (
+        <section className="card">
+          <h2>Par groupe</h2>
+          {byGroup.map((g) => (
+            <div className="hbar-row" key={g.name}>
+              <span className="hbar-label" title={g.name}>{g.name}</span>
+              <HBar value={g.total} max={maxGroup} color="#3987e5" />
+              <span className="hbar-value">{g.total}</span>
+            </div>
+          ))}
+        </section>
+      )}
 
       <section className="card">
         <h2>Par lien</h2>

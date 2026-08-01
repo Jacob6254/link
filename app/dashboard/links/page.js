@@ -81,9 +81,19 @@ export default function LinksPage() {
     setTimeout(() => setCopied(null), 1500);
   }
 
-  const groupName = (id) => groups.find((g) => g.id === id)?.name;
-
   if (links === null) return <main className="panel"><p className="hint">Chargement…</p></main>;
+
+  // Liens rangés par groupe, "sans groupe" en dernier.
+  const sections = [
+    ...groups
+      .map((g) => ({ key: g.id, name: g.name, items: links.filter((l) => l.group_id === g.id) }))
+      .filter((s) => s.items.length > 0),
+    {
+      key: "none",
+      name: "Sans groupe",
+      items: links.filter((l) => !l.group_id || !groups.some((g) => g.id === l.group_id)),
+    },
+  ].filter((s) => s.items.length > 0);
 
   return (
     <main className="panel">
@@ -131,8 +141,13 @@ export default function LinksPage() {
       <section className="card">
         <h2>Liens actifs <span className="count">{links.length}</span></h2>
         {links.length === 0 && <p className="hint">Aucun lien pour l&apos;instant.</p>}
+        {sections.map((section) => (
+        <div className="link-section" key={section.key}>
+        <h3 className="section-title">
+          {section.name} <span className="section-count">{section.items.length}</span>
+        </h3>
         <ul className="link-list">
-          {links.map((l) =>
+          {section.items.map((l) =>
             editId === l.id ? (
               <li key={l.id} className="editing">
                 <div className="form-row">
@@ -170,9 +185,6 @@ export default function LinksPage() {
                 <div className="link-info">
                   <strong>{l.label}</strong>
                   <span className="mono">/{l.slug}</span>
-                  {l.group_id && groupName(l.group_id) && (
-                    <span className="badge">{groupName(l.group_id)}</span>
-                  )}
                   {l.owner && <span className="badge badge-dim">{l.owner}</span>}
                   <br />
                   <span className="hint">{l.web_url}</span>
@@ -190,6 +202,8 @@ export default function LinksPage() {
             )
           )}
         </ul>
+        </div>
+        ))}
       </section>
     </main>
   );
