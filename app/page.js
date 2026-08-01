@@ -1,30 +1,34 @@
 // app/page.js
-// Page bio (accès protégé par le middleware : connexion requise).
-// Les liens viennent de Supabase (gérés via /admin).
-import { cookies } from "next/headers";
+// Page bio publique : tous les liens, organisés par groupe.
 import { sb } from "@/lib/db";
-import { verifySession } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const token = (await cookies()).get("session")?.value;
-  const session = token ? await verifySession(token) : null;
-
   let links = [];
+  let groups = [];
   try {
-    links = await sb("/links?select=slug,label&order=sort_order.asc,id.asc");
+    links = await sb("/links?select=slug,label,group_id&order=sort_order.asc,id.asc");
+    groups = await sb("/groups?select=id,name&order=sort_order.asc,id.asc");
   } catch (err) {
+    // Tables v2 pas encore migrées : on retombe sur la liste simple.
     console.error(err);
+    if (links.length === 0) {
+      try {
+        links = await sb("/links?select=slug,label&order=sort_order.asc,id.asc");
+      } catch (err2) {
+        console.error(err2);
+      }
+    }
   }
+
+  const ungrouped = links.filter((l) => !l.group_id);
+  const sections = groups
+    .map((g) => ({ ...g, links: links.filter((l) => l.group_id === g.id) }))
+    .filter((g) => g.links.length > 0);
 
   return (
     <main className="bio">
-      <div className="session-bar">
-        {session?.role === "admin" && <a href="/admin">Admin</a>}
-        <a href="/api/logout">Se déconnecter</a>
-      </div>
-
       <header className="bio-head">
         <div className="avatar" aria-hidden="true">V</div>
         <h1>Votre Nom</h1>
@@ -33,14 +37,30 @@ export default async function Home() {
 
       <nav className="links" aria-label="Mes réseaux">
         {links.length === 0 && (
-          <p className="empty">Aucun lien pour l&apos;instant. Ajoutez-les depuis /admin.</p>
+          <p className="empty">Aucun lien pour l&apos;instant.</p>
         )}
-        {links.map((link) => (
-          <a key={link.slug} href={`/go/${link.slug}`} className="link-btn">
+
+        {ungrouped.map((link) => (
+          <a key={link.slug} href={`/${link.slug}`} className="link-btn">
             {link.label}
           </a>
         ))}
+
+        {sections.map((g) => (
+          <section key={g.id} className="link-group">
+            <h2 className="group-title">{g.name}</h2>
+            {g.links.map((link) => (
+              <a key={link.slug} href={`/${link.slug}`} className="link-btn">
+                {link.label}
+              </a>
+            ))}
+          </section>
+        ))}
       </nav>
+
+      <footer className="bio-foot">
+        <a href="/dashboard">Espace membre</a>
+      </footer>
     </main>
   );
 }

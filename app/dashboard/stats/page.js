@@ -1,0 +1,246 @@
+// app/dashboard/stats/page.js
+"use client";
+// Statistiques détaillées : tuiles, clics par jour, plateformes, pays, par lien.
+// Graphiques SVG maison — palette validée (CVD-safe) : bleu / orange / vert.
+import { useEffect, useMemo, useState } from "react";
+
+const SERIES = { android: "#3987e5", ios: "#d95926", desktop: "#199e70" };
+const PLATFORM_LABEL = { android: "Android", ios: "iOS", desktop: "Desktop" };
+
+function flagEmoji(code) {
+  if (!/^[A-Z]{2}$/.test(code)) return "🌐";
+  return String.fromCodePoint(...[...code].map((c) => 0x1f1e6 + c.charCodeAt(0) - 65));
+}
+
+function countryName(code) {
+  if (!/^[A-Z]{2}$/.test(code)) return "Inconnu";
+  try {
+    return new Intl.DisplayNames(["fr"], { type: "region" }).of(code) || code;
+  } catch {
+    return code;
+  }
+}
+
+// ===== Graphique barres : clics par jour =====
+function DayChart({ byDay }) {
+  const [tip, setTip] = useState(null);
+  const days = useMemo(
+    () => Object.entries(byDay).sort(([a], [b]) => (a < b ? -1 : 1)),
+    [byDay]
+  );
+  const W = 640, H = 180, PAD_L = 30, PAD_B = 20, PAD_T = 8;
+  const max = Math.max(1, ...days.map(([, n]) => n));
+  const innerW = W - PAD_L - 4;
+  const innerH = H - PAD_B - PAD_T;
+  const step = innerW / days.length;
+  const barW = Math.max(4, step - 2);
+
+  const gridLines = [0.5, 1].map((f) => Math.round(max * f));
+
+  return (
+    <div className="chart-wrap">
+      <svg viewBox={`0 0 ${W} ${H}`} className="chart" role="img"
+        aria-label="Clics par jour sur 30 jours">
+        {gridLines.map((v) => {
+          const y = PAD_T + innerH - (v / max) * innerH;
+          return (
+            <g key={v}>
+              <line x1={PAD_L} x2={W - 4} y1={y} y2={y} className="grid" />
+              <text x={PAD_L - 6} y={y + 3} className="tick" textAnchor="end">{v}</text>
+            </g>
+          );
+        })}
+        <line x1={PAD_L} x2={W - 4} y1={PAD_T + innerH} y2={PAD_T + innerH} className="axis" />
+        {days.map(([day, n], i) => {
+          const h = max ? (n / max) * innerH : 0;
+          const x = PAD_L + i * step + 1;
+          const y = PAD_T + innerH - h;
+          return (
+            <g key={day}>
+              {/* zone de survol plus large que la barre */}
+              <rect
+                x={PAD_L + i * step} y={PAD_T} width={step} height={innerH + PAD_B}
+                fill="transparent"
+                onMouseEnter={() => setTip({ i, day, n })}
+                onMouseLeave={() => setTip(null)}
+              />
+              {n > 0 && (
+                <rect
+                  x={x} y={y} width={barW} height={Math.max(h, 2)} rx="3"
+                  fill="#3987e5" opacity={tip && tip.i !== i ? 0.45 : 1}
+                  pointerEvents="none"
+                />
+              )}
+            </g>
+          );
+        })}
+        {days.map(([day], i) =>
+          i % 5 === 0 ? (
+            <text key={day} x={PAD_L + i * step + step / 2} y={H - 6}
+              className="tick" textAnchor="middle">
+              {day.slice(8, 10)}/{day.slice(5, 7)}
+            </text>
+          ) : null
+        )}
+      </svg>
+      {tip && (
+        <div className="chart-tip" style={{ left: `${((PAD_L + tip.i * step + step / 2) / W) * 100}%` }}>
+          <strong>{tip.n}</strong> clic{tip.n > 1 ? "s" : ""} — {tip.day.slice(8, 10)}/{tip.day.slice(5, 7)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ===== Barres horizontales génériques (valeur directe affichée) =====
+function HBar({ value, max, color }) {
+  const pct = max ? Math.max((value / max) * 100, 2) : 0;
+  return (
+    <div className="hbar-track">
+      <div className="hbar-fill" style={{ width: `${pct}%`, background: color }} />
+    </div>
+  );
+}
+
+export default function StatsPage() {
+  const [stats, setStats] = useState(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    (async () => {
+      const res = await fetch("/api/stats");
+      if (res.status === 401) {
+        window.location.href = "/login?next=/dashboard/stats";
+        return;
+      }
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error || "Erreur de chargement");
+        return;
+      }
+      setStats(await res.json());
+    })();
+  }, []);
+
+  if (error) return <main className="panel"><p className="error">{error}</p></main>;
+  if (!stats) return <main className="panel"><p className="hint">Chargement…</p></main>;
+
+  const { total, byDay, byLink, byPlatform, byCountry, windowDays, capped } = stats;
+  const bestLink = byLink[0];
+  const bestCountry = byCountry[0];
+  const platEntries = Object.entries(byPlatform).sort(([, a], [, b]) => b - a);
+  const bestPlatform = platEntries[0];
+  const maxPlat = Math.max(1, ...platEntries.map(([, n]) => n));
+  const maxCountry = Math.max(1, ...byCountry.map((c) => c.total));
+  const maxLink = Math.max(1, ...byLink.map((l) => l.total));
+
+  return (
+    <main className="panel">
+      <h1>Statistiques <span className="hint">— {windowDays} derniers jours{capped ? " (fenêtre pleine)" : ""}</span></h1>
+
+      <div className="tiles">
+        <div className="tile">
+          <span className="tile-label">Clics</span>
+          <span className="tile-value">{total}</span>
+        </div>
+        <div className="tile">
+          <span className="tile-label">Meilleur lien</span>
+          <span className="tile-value tile-small">
+            {bestLink ? `/${bestLink.slug}` : "—"}
+          </span>
+          {bestLink && <span className="tile-sub">{bestLink.total} clics</span>}
+        </div>
+        <div className="tile">
+          <span className="tile-label">Top pays</span>
+          <span className="tile-value tile-small">
+            {bestCountry ? `${flagEmoji(bestCountry.code)} ${countryName(bestCountry.code)}` : "—"}
+          </span>
+          {bestCountry && <span className="tile-sub">{bestCountry.total} clics</span>}
+        </div>
+        <div className="tile">
+          <span className="tile-label">Top plateforme</span>
+          <span className="tile-value tile-small">
+            {bestPlatform && bestPlatform[1] > 0 ? PLATFORM_LABEL[bestPlatform[0]] : "—"}
+          </span>
+          {bestPlatform && bestPlatform[1] > 0 && (
+            <span className="tile-sub">{bestPlatform[1]} clics</span>
+          )}
+        </div>
+      </div>
+
+      <section className="card">
+        <h2>Clics par jour</h2>
+        {total === 0 ? <p className="hint">Aucun clic sur la période.</p> : <DayChart byDay={byDay} />}
+      </section>
+
+      <div className="two-col">
+        <section className="card">
+          <h2>Plateformes</h2>
+          {platEntries.map(([key, n]) => (
+            <div className="hbar-row" key={key}>
+              <span className="hbar-label">
+                <span className="dot" style={{ background: SERIES[key] }} aria-hidden="true" />
+                {PLATFORM_LABEL[key]}
+              </span>
+              <HBar value={n} max={maxPlat} color={SERIES[key]} />
+              <span className="hbar-value">{n}</span>
+            </div>
+          ))}
+        </section>
+
+        <section className="card">
+          <h2>Pays</h2>
+          {byCountry.length === 0 && <p className="hint">Aucune donnée pays pour l&apos;instant.</p>}
+          {byCountry.slice(0, 10).map((c) => (
+            <div className="hbar-row" key={c.code}>
+              <span className="hbar-label" title={countryName(c.code)}>
+                <span aria-hidden="true">{flagEmoji(c.code)}</span> {countryName(c.code)}
+              </span>
+              <HBar value={c.total} max={maxCountry} color="#3987e5" />
+              <span className="hbar-value">{c.total}</span>
+            </div>
+          ))}
+          <p className="hint">
+            Le pays est fourni par l&apos;hébergeur (Vercel) — les clics antérieurs à
+            cette mise à jour apparaissent en « Inconnu ».
+          </p>
+        </section>
+      </div>
+
+      <section className="card">
+        <h2>Par lien</h2>
+        {byLink.length === 0 && <p className="hint">Aucun clic sur la période.</p>}
+        {byLink.length > 0 && (
+          <table>
+            <thead>
+              <tr>
+                <th>Lien</th>
+                <th className="th-bar" aria-hidden="true"></th>
+                <th>Total</th>
+                <th>Android</th>
+                <th>iOS</th>
+                <th>Desktop</th>
+              </tr>
+            </thead>
+            <tbody>
+              {byLink.map((l) => (
+                <tr key={l.slug}>
+                  <td>
+                    <strong>{l.label}</strong> <span className="mono">/{l.slug}</span>
+                  </td>
+                  <td className="th-bar">
+                    <HBar value={l.total} max={maxLink} color="#3987e5" />
+                  </td>
+                  <td><strong>{l.total}</strong></td>
+                  <td>{l.android}</td>
+                  <td>{l.ios}</td>
+                  <td>{l.desktop}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
+    </main>
+  );
+}

@@ -1,5 +1,6 @@
-// app/go/[slug]/route.js
-// Compatibilité : les anciens liens /go/slug déjà partagés continuent de marcher.
+// app/[slug]/route.js
+// Liens courts à la racine : allmysocials.us/insta
+// Les pages statiques (/login, /dashboard, ...) ont priorité sur cette route.
 import { handleGoLink } from "@/lib/golink";
 
 export const dynamic = "force-dynamic";

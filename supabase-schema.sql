@@ -1,12 +1,13 @@
 -- supabase-schema.sql
 -- À exécuter dans Supabase > SQL Editor.
--- Si vous aviez déjà créé la table clicks (ancienne version), n'exécutez que le bloc "links".
+-- Le script est idempotent : le relancer en entier ne casse rien et ne perd
+-- aucune donnée (tout est en "if not exists").
 
--- ===== links : vos liens, gérés depuis /admin =====
-create table public.links (
+-- ===== links : vos liens, gérés depuis /dashboard/links =====
+create table if not exists public.links (
   id bigint generated always as identity primary key,
   created_at timestamptz not null default now(),
-  slug text not null unique,      -- ex: "instagram" -> https://votresite.vercel.app/go/instagram
+  slug text not null unique,      -- ex: "instagram" -> https://votresite.us/instagram
   label text not null,            -- texte du bouton
   web_url text not null,          -- URL web du profil (les deep-links sont dérivés automatiquement)
   sort_order int not null default 0
@@ -15,7 +16,7 @@ alter table public.links enable row level security;
 -- Aucune policy : seule la service_role key (serveur) peut lire/écrire.
 
 -- ===== clicks : tracking =====
-create table public.clicks (
+create table if not exists public.clicks (
   id bigint generated always as identity primary key,
   created_at timestamptz not null default now(),
   slug text not null,
@@ -25,11 +26,10 @@ create table public.clicks (
 );
 alter table public.clicks enable row level security;
 
-create index clicks_slug_idx on public.clicks (slug, created_at desc);
+create index if not exists clicks_slug_idx on public.clicks (slug, created_at desc);
 
--- ===== users : profils de connexion, gérés depuis /admin =====
--- Si vous aviez déjà exécuté les blocs ci-dessus, n'exécutez que ce bloc.
-create table public.users (
+-- ===== users : profils de connexion, gérés depuis /dashboard/profiles =====
+create table if not exists public.users (
   id bigint generated always as identity primary key,
   created_at timestamptz not null default now(),
   username text not null unique,
@@ -38,3 +38,17 @@ create table public.users (
 );
 alter table public.users enable row level security;
 -- Aucune policy : seule la service_role key (serveur) peut lire/écrire.
+
+-- ===== v2 : groupes de liens, propriétaire des liens, pays des clics =====
+create table if not exists public.groups (
+  id bigint generated always as identity primary key,
+  created_at timestamptz not null default now(),
+  name text not null,
+  sort_order int not null default 0
+);
+alter table public.groups enable row level security;
+-- Aucune policy : seule la service_role key (serveur) peut lire/écrire.
+
+alter table public.links  add column if not exists group_id bigint references public.groups(id) on delete set null;
+alter table public.links  add column if not exists owner text;      -- username du profil qui a créé le lien
+alter table public.clicks add column if not exists country text;    -- code pays (header Vercel)
