@@ -78,3 +78,9 @@ create table if not exists public.page_buttons (
 alter table public.page_buttons enable row level security;
 
 alter table public.clicks add column if not exists button_id bigint; -- clic venant d'un bouton de page
+
+-- ===== v4 : boutons enrichis (image de fond, animation) =====
+-- Le bucket de stockage "media" (avatars, fonds, images de boutons) est créé
+-- automatiquement par le serveur au premier upload — rien à faire côté Storage.
+alter table public.page_buttons add column if not exists image text;      -- URL d'image (bouton bannière)
+alter table public.page_buttons add column if not exists animation text;  -- none | bounce | pulse | wiggle

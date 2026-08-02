@@ -375,6 +375,40 @@ button.move { padding: 8px 10px; }
 button.move:disabled { opacity: 0.35; cursor: default; }
 .btn-link { text-decoration: none; }
 
+.field-label {
+  font-size: 0.78rem; font-weight: 600; letter-spacing: 0.05em;
+  text-transform: uppercase; color: var(--muted);
+  display: block; margin-bottom: 6px;
+}
+.upload-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.upload-row .grow { flex: 1; min-width: 120px; }
+.thumb {
+  width: 42px; height: 42px; border-radius: 50%; object-fit: cover;
+  border: 1px solid var(--border); flex-shrink: 0;
+}
+.thumb-text {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--accent-soft); color: var(--accent-strong);
+  font-weight: 700; font-size: 1.1rem;
+}
+.thumb-wide { width: 74px; height: 42px; border-radius: 8px; }
+.btn-row { display: flex; align-items: center; gap: 12px; min-width: 0; }
+
+.check {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 0.9rem; margin: 12px 0 4px; cursor: pointer;
+}
+.check input[type="checkbox"] {
+  width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer;
+}
+
+input[type="range"] {
+  width: 100%; padding: 0; height: 28px;
+  background: transparent; border: none; accent-color: var(--accent);
+}
+
+.editor .card .field { margin-bottom: 12px; }
+
 @media (max-width: 1000px) {
   .editor-cols { grid-template-columns: 1fr; }
   .editor-preview { position: static; order: -1; }

@@ -1,12 +1,57 @@
 // app/dashboard/pages/[id]/page.js
 "use client";
-// Éditeur de page bio : identité, thème (presets + personnalisation),
-// boutons (ajout, renommage, réordonnancement) — avec aperçu en direct.
+// Éditeur de page bio : identité (avatar uploadable), thème complet (presets,
+// couleurs, police, fond d'image avec flou, badge, footer), boutons (image de
+// fond, animation, renommage, réordonnancement) — avec aperçu en direct.
 // L'aperçu utilise le MÊME moteur de rendu que la page publique (iframe).
-import { use, useCallback, useEffect, useMemo, useState } from "react";
-import { PRESETS, renderPageHTML, resolveTheme } from "@/lib/pagerender";
+import { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  ANIMATIONS, FONTS, PRESETS, renderPageHTML, resolveTheme,
+} from "@/lib/pagerender";
 
 const NEW_BUTTON = { label: "", url: "" };
+
+async function uploadFile(file) {
+  const fd = new FormData();
+  fd.append("file", file);
+  const res = await fetch("/api/upload", { method: "POST", body: fd });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || "Upload failed");
+  return data.url;
+}
+
+// Bouton "Upload" branché sur un input file caché.
+function UploadButton({ label, onUploaded, onError, className = "ghost" }) {
+  const inputRef = useRef(null);
+  const [busy, setBusy] = useState(false);
+
+  async function onChange(e) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setBusy(true);
+    try {
+      onUploaded(await uploadFile(file));
+    } catch (err) {
+      onError(err.message);
+    }
+    setBusy(false);
+  }
+
+  return (
+    <>
+      <input
+        ref={inputRef} type="file" hidden
+        accept="image/jpeg,image/png,image/webp,image/gif"
+        onChange={onChange}
+      />
+      <button type="button" className={className} disabled={busy}
+        onClick={() => inputRef.current?.click()}>
+        {busy ? "Uploading…" : label}
+      </button>
+    </>
+  );
+}
 
 export default function PageEditor({ params }) {
   const { id } = use(params);
@@ -59,8 +104,11 @@ export default function PageEditor({ params }) {
   }
 
   function applyPreset(key) {
-    // Un preset remet à zéro les personnalisations pour repartir propre.
-    setPage((p) => ({ ...p, theme: { preset: key } }));
+    // Un preset remplace les couleurs mais conserve police, fond et options.
+    setPage((p) => {
+      const { bg1, bg2, accent, text, btnFill, btnShape, ...keep } = p.theme || {};
+      return { ...p, theme: { ...keep, preset: key } };
+    });
     setDirty(true);
     setSaved(false);
   }
@@ -99,17 +147,25 @@ export default function PageEditor({ params }) {
     setButtons((b) => [...b, data]);
   }
 
-  async function saveButton(bid) {
+  async function patchButton(bid, body) {
     setError("");
     const res = await fetch(`/api/buttons/${bid}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(editBtn),
+      body: JSON.stringify(body),
     });
     const data = await res.json();
-    if (!res.ok) return setError(data.error || "Something went wrong");
+    if (!res.ok) {
+      setError(data.error || "Something went wrong");
+      return null;
+    }
     setButtons((btns) => btns.map((b) => (b.id === bid ? { ...b, ...data } : b)));
-    setEditBtnId(null);
+    return data;
+  }
+
+  async function saveButton(bid) {
+    const data = await patchButton(bid, editBtn);
+    if (data) setEditBtnId(null);
   }
 
   async function removeButton(bid, label) {
@@ -182,23 +238,50 @@ export default function PageEditor({ params }) {
                 onChange={(e) => patchLocal({ tagline: e.target.value })}
               />
             </label>
-            <div className="form-row">
-              <label className="field">
-                <span>Slug</span>
-                <input
-                  value={page.slug || ""}
-                  onChange={(e) => patchLocal({ slug: e.target.value })}
+            <label className="field">
+              <span>Slug</span>
+              <input
+                value={page.slug || ""}
+                onChange={(e) => patchLocal({ slug: e.target.value })}
+              />
+            </label>
+            <div className="field">
+              <span className="field-label">Avatar</span>
+              <div className="upload-row">
+                {/^https?:\/\//i.test(page.avatar || "") ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img className="thumb" src={page.avatar} alt="" />
+                ) : (
+                  <span className="thumb thumb-text">
+                    {(page.avatar || page.title || "?").trim()[0] || "?"}
+                  </span>
+                )}
+                <UploadButton
+                  label="Upload photo"
+                  onUploaded={(url) => patchLocal({ avatar: url })}
+                  onError={setError}
                 />
-              </label>
-              <label className="field">
-                <span>Avatar (emoji or image URL)</span>
                 <input
-                  placeholder="😎 or https://…/me.jpg"
-                  value={page.avatar || ""}
+                  className="grow"
+                  placeholder="…or an emoji (😎)"
+                  value={/^https?:\/\//i.test(page.avatar || "") ? "" : page.avatar || ""}
                   onChange={(e) => patchLocal({ avatar: e.target.value })}
                 />
-              </label>
+                {page.avatar && (
+                  <button className="ghost" onClick={() => patchLocal({ avatar: "" })}>
+                    Clear
+                  </button>
+                )}
+              </div>
             </div>
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={!!page.theme?.titleBadge}
+                onChange={(e) => patchTheme({ titleBadge: e.target.checked })}
+              />
+              <span>Verified badge next to the title</span>
+            </label>
           </section>
 
           <section className="card">
@@ -232,6 +315,14 @@ export default function PageEditor({ params }) {
                 />
               </label>
               <label className="field color-field">
+                <span>Text</span>
+                <input
+                  type="color"
+                  value={theme.text}
+                  onChange={(e) => patchTheme({ text: e.target.value })}
+                />
+              </label>
+              <label className="field color-field">
                 <span>Background 1</span>
                 <input
                   type="color"
@@ -246,6 +337,17 @@ export default function PageEditor({ params }) {
                   value={theme.bg2}
                   onChange={(e) => patchTheme({ bg2: e.target.value })}
                 />
+              </label>
+              <label className="field">
+                <span>Font</span>
+                <select
+                  value={theme.font}
+                  onChange={(e) => patchTheme({ font: e.target.value })}
+                >
+                  {Object.entries(FONTS).map(([key, f]) => (
+                    <option key={key} value={key}>{f.name}</option>
+                  ))}
+                </select>
               </label>
               <label className="field">
                 <span>Button shape</span>
@@ -270,6 +372,55 @@ export default function PageEditor({ params }) {
                 </select>
               </label>
             </div>
+
+            <div className="field">
+              <span className="field-label">Background image</span>
+              <div className="upload-row">
+                {theme.bgImage && (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img className="thumb thumb-wide" src={theme.bgImage} alt="" />
+                )}
+                <UploadButton
+                  label={theme.bgImage ? "Replace image" : "Upload image"}
+                  onUploaded={(url) => patchTheme({ bgImage: url })}
+                  onError={setError}
+                />
+                {theme.bgImage && (
+                  <button className="ghost" onClick={() => patchTheme({ bgImage: "" })}>
+                    Remove
+                  </button>
+                )}
+              </div>
+            </div>
+            {theme.bgImage && (
+              <div className="theme-controls">
+                <label className="field">
+                  <span>Blur — {theme.bgBlur}px</span>
+                  <input
+                    type="range" min="0" max="30"
+                    value={theme.bgBlur}
+                    onChange={(e) => patchTheme({ bgBlur: Number(e.target.value) })}
+                  />
+                </label>
+                <label className="field">
+                  <span>Darken — {theme.bgDim}%</span>
+                  <input
+                    type="range" min="0" max="80"
+                    value={theme.bgDim}
+                    onChange={(e) => patchTheme({ bgDim: Number(e.target.value) })}
+                  />
+                </label>
+              </div>
+            )}
+
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={!!page.theme?.hideFooter}
+                onChange={(e) => patchTheme({ hideFooter: e.target.checked })}
+              />
+              <span>Hide the AllMySocials footer</span>
+            </label>
             <p className="hint">Theme and page info are applied when you hit Save.</p>
           </section>
 
@@ -290,8 +441,9 @@ export default function PageEditor({ params }) {
               <button onClick={addButton}>Add</button>
             </div>
             <p className="hint">
-              Buttons open the native app when possible (Instagram, TikTok,
-              YouTube…) and every click is tracked in Analytics.
+              Click Edit on a button to give it a background photo (banner style)
+              or an animation. Every click opens the native app when possible and
+              is tracked in Analytics.
             </p>
 
             <ul className="link-list">
@@ -308,6 +460,39 @@ export default function PageEditor({ params }) {
                         onChange={(e) => setEditBtn({ ...editBtn, url: e.target.value })}
                       />
                     </div>
+                    <div className="form-row">
+                      <label className="field">
+                        <span>Animation</span>
+                        <select
+                          value={editBtn.animation || "none"}
+                          onChange={(e) => setEditBtn({ ...editBtn, animation: e.target.value })}
+                        >
+                          {Object.entries(ANIMATIONS).map(([key, name]) => (
+                            <option key={key} value={key}>{name}</option>
+                          ))}
+                        </select>
+                      </label>
+                      <div className="field">
+                        <span className="field-label">Background photo</span>
+                        <div className="upload-row">
+                          {editBtn.image && (
+                            /* eslint-disable-next-line @next/next/no-img-element */
+                            <img className="thumb thumb-wide" src={editBtn.image} alt="" />
+                          )}
+                          <UploadButton
+                            label={editBtn.image ? "Replace" : "Upload"}
+                            onUploaded={(url) => setEditBtn({ ...editBtn, image: url })}
+                            onError={setError}
+                          />
+                          {editBtn.image && (
+                            <button className="ghost"
+                              onClick={() => setEditBtn({ ...editBtn, image: "" })}>
+                              Remove
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                     <div className="actions">
                       <button onClick={() => saveButton(b.id)}>Save</button>
                       <button className="ghost" onClick={() => setEditBtnId(null)}>Cancel</button>
@@ -315,10 +500,19 @@ export default function PageEditor({ params }) {
                   </li>
                 ) : (
                   <li key={b.id}>
-                    <div className="link-info">
-                      <strong>{b.label}</strong>
-                      <br />
-                      <span className="hint">{b.url}</span>
+                    <div className="link-info btn-row">
+                      {b.image && (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img className="thumb thumb-wide" src={b.image} alt="" />
+                      )}
+                      <div>
+                        <strong>{b.label}</strong>
+                        {b.animation && b.animation !== "none" && (
+                          <span className="badge">{ANIMATIONS[b.animation]}</span>
+                        )}
+                        <br />
+                        <span className="hint">{b.url}</span>
+                      </div>
                     </div>
                     <div className="actions">
                       <button className="ghost move" disabled={i === 0}
@@ -326,7 +520,13 @@ export default function PageEditor({ params }) {
                       <button className="ghost move" disabled={i === buttons.length - 1}
                         onClick={() => moveButton(i, 1)} title="Move down">↓</button>
                       <button className="ghost"
-                        onClick={() => { setEditBtnId(b.id); setEditBtn({ label: b.label, url: b.url }); }}>
+                        onClick={() => {
+                          setEditBtnId(b.id);
+                          setEditBtn({
+                            label: b.label, url: b.url,
+                            image: b.image || "", animation: b.animation || "none",
+                          });
+                        }}>
                         Edit
                       </button>
                       <button className="danger" onClick={() => removeButton(b.id, b.label)}>

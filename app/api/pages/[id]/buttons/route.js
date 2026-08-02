@@ -2,7 +2,7 @@
 // Ajouter un bouton à une page bio.
 import { sb } from "@/lib/db";
 import { requireUser, unauthorized } from "@/lib/auth";
-import { ownedPage, validateButton } from "@/lib/pages";
+import { ownedPage, sanitizeButtonExtras, validateButton } from "@/lib/pages";
 
 export const dynamic = "force-dynamic";
 
@@ -19,15 +19,19 @@ export async function POST(request, { params }) {
   const invalid = validateButton({ label, url });
   if (invalid) return Response.json({ error: invalid }, { status: 400 });
 
+  const row = {
+    page_id: Number(id),
+    label,
+    url,
+    sort_order: Number(body.sort_order) || 0,
+  };
+  const extraError = sanitizeButtonExtras(body, row);
+  if (extraError) return Response.json({ error: extraError }, { status: 400 });
+
   const created = await sb("/page_buttons", {
     method: "POST",
     headers: { Prefer: "return=representation" },
-    body: JSON.stringify({
-      page_id: Number(id),
-      label,
-      url,
-      sort_order: Number(body.sort_order) || 0,
-    }),
+    body: JSON.stringify(row),
   });
   return Response.json(created[0], { status: 201 });
 }

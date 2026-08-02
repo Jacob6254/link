@@ -1,6 +1,6 @@
 // app/api/pages/[id]/route.js
 // Lire / modifier / supprimer une page bio : propriétaire ou admin.
-import { sb } from "@/lib/db";
+import { sb, isMissingSchema, migrationError } from "@/lib/db";
 import { requireUser, unauthorized } from "@/lib/auth";
 import { RESERVED_SLUGS } from "@/lib/golink";
 import { slugTaken } from "@/lib/slugs";
@@ -15,10 +15,15 @@ export async function GET(request, { params }) {
   const check = await ownedPage(session, id);
   if (check.error) return Response.json({ error: check.error }, { status: check.status });
 
-  const buttons = await sb(
-    `/page_buttons?page_id=eq.${id}&select=id,label,url,sort_order&order=sort_order.asc,id.asc`
-  );
-  return Response.json({ ...check.page, buttons });
+  try {
+    const buttons = await sb(
+      `/page_buttons?page_id=eq.${id}&select=id,label,url,image,animation,sort_order&order=sort_order.asc,id.asc`
+    );
+    return Response.json({ ...check.page, buttons });
+  } catch (err) {
+    if (isMissingSchema(err)) return migrationError();
+    throw err;
+  }
 }
 
 export async function PATCH(request, { params }) {

@@ -21,9 +21,18 @@ export async function GET(request, { params }) {
     );
     const page = pages?.[0];
     if (page) {
-      const buttons = await sb(
-        `/page_buttons?page_id=eq.${page.id}&select=id,label&order=sort_order.asc,id.asc`
-      );
+      let buttons;
+      try {
+        buttons = await sb(
+          `/page_buttons?page_id=eq.${page.id}&select=id,label,image,animation&order=sort_order.asc,id.asc`
+        );
+      } catch (err) {
+        // Colonnes v4 pas encore migrées : rendu sans images ni animations.
+        if (!isMissingSchema(err)) throw err;
+        buttons = await sb(
+          `/page_buttons?page_id=eq.${page.id}&select=id,label&order=sort_order.asc,id.asc`
+        );
+      }
       return new Response(renderPageHTML(page, buttons), {
         headers: {
           "Content-Type": "text/html; charset=utf-8",

@@ -2,7 +2,7 @@
 // Renommer / modifier / supprimer un bouton : propriétaire de la page ou admin.
 import { sb } from "@/lib/db";
 import { requireUser, unauthorized } from "@/lib/auth";
-import { ownedPage, validateButton } from "@/lib/pages";
+import { ownedPage, sanitizeButtonExtras, validateButton } from "@/lib/pages";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +34,8 @@ export async function PATCH(request, { params }) {
     patch.url = url;
   }
   if (body.sort_order !== undefined) patch.sort_order = Number(body.sort_order) || 0;
+  const extraError = sanitizeButtonExtras(body, patch);
+  if (extraError) return Response.json({ error: extraError }, { status: 400 });
   if (Object.keys(patch).length === 0) {
     return Response.json({ error: "Nothing to update" }, { status: 400 });
   }
