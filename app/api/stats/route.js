@@ -15,7 +15,7 @@ export async function GET(request) {
 
   const filter =
     session.role === "admin" ? "" : `&owner=eq.${encodeURIComponent(session.username)}`;
-  let links, groups;
+  let links, groups, pages;
   try {
     links = await sb(`/links?select=slug,label,group_id${filter}`);
     groups = await sb("/groups?select=id,name&order=sort_order.asc,id.asc");
@@ -23,10 +23,19 @@ export async function GET(request) {
     if (isMissingSchema(err)) return migrationError();
     throw err;
   }
-  const labelBySlug = Object.fromEntries(links.map((l) => [l.slug, l.label]));
+  try {
+    pages = await sb(`/pages?select=slug,title${filter}`);
+  } catch (err) {
+    if (!isMissingSchema(err)) throw err;
+    pages = []; // tables v3 pas encore migrées
+  }
+  const labelBySlug = Object.fromEntries([
+    ...links.map((l) => [l.slug, l.label]),
+    ...pages.map((p) => [p.slug, `${p.title} (page)`]),
+  ]);
   const groupBySlug = Object.fromEntries(links.map((l) => [l.slug, l.group_id]));
   const groupName = Object.fromEntries(groups.map((g) => [g.id, g.name]));
-  const slugs = links.map((l) => l.slug);
+  const slugs = [...links.map((l) => l.slug), ...pages.map((p) => p.slug)];
 
   if (slugs.length === 0) {
     return Response.json({

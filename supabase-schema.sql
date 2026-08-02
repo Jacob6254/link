@@ -52,3 +52,29 @@ alter table public.groups enable row level security;
 alter table public.links  add column if not exists group_id bigint references public.groups(id) on delete set null;
 alter table public.links  add column if not exists owner text;      -- username du profil qui a créé le lien
 alter table public.clicks add column if not exists country text;    -- code pays (header Vercel)
+
+-- ===== v3 : pages bio (type Linktree) et leurs boutons =====
+create table if not exists public.pages (
+  id bigint generated always as identity primary key,
+  created_at timestamptz not null default now(),
+  slug text not null unique,       -- allmysocials.us/<slug>
+  owner text,                      -- username du profil propriétaire
+  title text not null,
+  tagline text,
+  avatar text,                     -- emoji, initiales ou URL d'image
+  theme jsonb not null default '{}'::jsonb
+);
+alter table public.pages enable row level security;
+-- Aucune policy : seule la service_role key (serveur) peut lire/écrire.
+
+create table if not exists public.page_buttons (
+  id bigint generated always as identity primary key,
+  created_at timestamptz not null default now(),
+  page_id bigint not null references public.pages(id) on delete cascade,
+  label text not null,
+  url text not null,
+  sort_order int not null default 0
+);
+alter table public.page_buttons enable row level security;
+
+alter table public.clicks add column if not exists button_id bigint; -- clic venant d'un bouton de page

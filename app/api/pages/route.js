@@ -1,9 +1,10 @@
-// app/api/links/route.js
-// Liens : chaque profil gère les siens ; les admins voient tout.
+// app/api/pages/route.js
+// Pages bio : chaque profil gère les siennes ; les admins voient tout.
 import { sb, isMissingSchema, migrationError } from "@/lib/db";
 import { requireUser, unauthorized } from "@/lib/auth";
-import { validateLink } from "@/lib/golink";
+import { RESERVED_SLUGS } from "@/lib/golink";
 import { slugTaken } from "@/lib/slugs";
+import { DEFAULT_THEME } from "@/lib/pagerender";
 
 export const dynamic = "force-dynamic";
 
@@ -13,10 +14,10 @@ export async function GET(request) {
   const filter =
     session.role === "admin" ? "" : `&owner=eq.${encodeURIComponent(session.username)}`;
   try {
-    const links = await sb(
-      `/links?select=id,slug,label,web_url,group_id,owner,sort_order&order=sort_order.asc,id.asc${filter}`
+    const pages = await sb(
+      `/pages?select=id,slug,title,tagline,avatar,owner&order=id.asc${filter}`
     );
-    return Response.json(links);
+    return Response.json(pages);
   } catch (err) {
     if (isMissingSchema(err)) return migrationError();
     throw err;
@@ -28,31 +29,38 @@ export async function POST(request) {
   if (!session) return unauthorized();
   const body = await request.json().catch(() => ({}));
   const slug = String(body.slug || "").trim().toLowerCase();
-  const label = String(body.label || "").trim();
-  const web_url = String(body.web_url || "").trim();
-  const group_id = body.group_id ? Number(body.group_id) : null;
+  const title = String(body.title || "").trim();
 
-  const invalid = validateLink({ slug, label, web_url });
-  if (invalid) return Response.json({ error: invalid }, { status: 400 });
+  if (!/^[a-z0-9-]{1,50}$/.test(slug)) {
+    return Response.json(
+      { error: "Invalid slug (lowercase letters, digits, hyphens)" },
+      { status: 400 }
+    );
+  }
+  if (RESERVED_SLUGS.includes(slug)) {
+    return Response.json({ error: `"${slug}" is reserved by the site` }, { status: 400 });
+  }
+  if (!title || title.length > 60) {
+    return Response.json({ error: "Title is required (60 characters max)" }, { status: 400 });
+  }
 
   try {
     if (await slugTaken(slug)) {
       return Response.json({ error: "That slug is already taken" }, { status: 409 });
     }
-    const created = await sb("/links", {
+    const created = await sb("/pages", {
       method: "POST",
       headers: { Prefer: "return=representation" },
       body: JSON.stringify({
         slug,
-        label,
-        web_url,
-        group_id,
+        title,
         owner: session.username,
-        sort_order: body.sort_order ?? 0,
+        theme: DEFAULT_THEME,
       }),
     });
     return Response.json(created[0], { status: 201 });
   } catch (err) {
+    if (isMissingSchema(err)) return migrationError();
     const msg = String(err.message || "");
     if (msg.includes("23505") || msg.includes("duplicate")) {
       return Response.json({ error: "That slug is already taken" }, { status: 409 });

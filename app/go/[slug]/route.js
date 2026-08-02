@@ -6,5 +6,6 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request, { params }) {
   const { slug } = await params;
-  return handleGoLink(request, slug);
+  const res = await handleGoLink(request, slug);
+  return res || new Response("Link not found", { status: 404 });
 }

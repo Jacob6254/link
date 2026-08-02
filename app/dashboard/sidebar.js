@@ -3,7 +3,8 @@
 import { usePathname } from "next/navigation";
 
 const NAV = [
-  { href: "/dashboard/links", label: "My links", icon: "🔗" },
+  { href: "/dashboard/pages", label: "My pages", icon: "🧩" },
+  { href: "/dashboard/links", label: "Short links", icon: "🔗" },
   { href: "/dashboard/groups", label: "Groups", icon: "🗂️" },
   { href: "/dashboard/stats", label: "Analytics", icon: "📊" },
 ];

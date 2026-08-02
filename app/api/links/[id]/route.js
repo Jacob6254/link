@@ -3,6 +3,7 @@
 import { sb } from "@/lib/db";
 import { requireUser, unauthorized } from "@/lib/auth";
 import { validateLink } from "@/lib/golink";
+import { slugTaken } from "@/lib/slugs";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +35,9 @@ export async function PATCH(request, { params }) {
   if (invalid) return Response.json({ error: invalid }, { status: 400 });
 
   try {
+    if (await slugTaken(slug, { exceptLinkId: id })) {
+      return Response.json({ error: "That slug is already taken" }, { status: 409 });
+    }
     const updated = await sb(`/links?id=eq.${id}`, {
       method: "PATCH",
       headers: { Prefer: "return=representation" },
