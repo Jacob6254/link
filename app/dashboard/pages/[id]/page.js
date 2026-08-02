@@ -8,6 +8,7 @@ import { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ANIMATIONS, FONTS, PRESETS, renderPageHTML, resolveTheme,
 } from "@/lib/pagerender";
+import { Loader, Modal, Toast } from "../../ui";
 
 const NEW_BUTTON = { label: "", url: "" };
 
@@ -64,8 +65,51 @@ export default function PageEditor({ params }) {
   const [editBtnId, setEditBtnId] = useState(null);
   const [editBtn, setEditBtn] = useState(NEW_BUTTON);
   const [origin, setOrigin] = useState("");
+  const [templates, setTemplates] = useState([]);
+  const [savingTpl, setSavingTpl] = useState(false);
+  const [tplName, setTplName] = useState("");
+  const [toast, setToast] = useState(null);
 
   useEffect(() => setOrigin(window.location.origin), []);
+
+  function flash(message, kind = "ok") {
+    setToast({ message, kind });
+    setTimeout(() => setToast(null), 2600);
+  }
+
+  const loadTemplates = useCallback(async () => {
+    const res = await fetch("/api/templates");
+    if (res.ok) setTemplates(await res.json());
+  }, []);
+
+  useEffect(() => { loadTemplates(); }, [loadTemplates]);
+
+  async function saveTemplate() {
+    const res = await fetch("/api/templates", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: tplName, theme: page.theme }),
+    });
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok) return flash(d.error || "Something went wrong", "err");
+    setSavingTpl(false);
+    setTplName("");
+    flash("Template saved");
+    loadTemplates();
+  }
+
+  function applyTemplate(tpl) {
+    setPage((p) => ({ ...p, theme: { ...tpl.theme } }));
+    setDirty(true);
+    setSaved(false);
+    flash(`Applied "${tpl.name}" — hit Save to keep it`);
+  }
+
+  async function deleteTemplate(tpl) {
+    if (!confirm(`Delete template “${tpl.name}”?`)) return;
+    await fetch(`/api/templates/${tpl.id}`, { method: "DELETE" });
+    loadTemplates();
+  }
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/pages/${id}`);
@@ -193,7 +237,7 @@ export default function PageEditor({ params }) {
   }
 
   if (error && !page) return <main className="panel"><p className="error">{error}</p></main>;
-  if (!page) return <main className="panel"><p className="hint">Loading…</p></main>;
+  if (!page) return <main className="panel"><Loader label="Loading editor" /></main>;
 
   const theme = resolveTheme(page.theme);
 
@@ -282,6 +326,50 @@ export default function PageEditor({ params }) {
               />
               <span>Verified badge next to the title</span>
             </label>
+          </section>
+
+          <section className="card">
+            <div className="card-head">
+              <h2>Templates <span className="count">{templates.length}</span></h2>
+              <button className="ghost" onClick={() => setSavingTpl(true)}>
+                Save current design
+              </button>
+            </div>
+            {templates.length === 0 ? (
+              <p className="hint">
+                No templates yet. Style this page the way you like, then hit
+                “Save current design” to reuse it on your other pages in one click.
+              </p>
+            ) : (
+              <div className="tpl-grid">
+                {templates.map((t) => {
+                  const tt = resolveTheme(t.theme);
+                  return (
+                    <div className="tpl" key={t.id}>
+                      <button
+                        className="tpl-swatch"
+                        style={{ background: `linear-gradient(150deg, ${tt.bg1}, ${tt.bg2})` }}
+                        onClick={() => applyTemplate(t)}
+                        title={`Apply ${t.name}`}
+                      >
+                        <span className="tpl-pill" style={{ background: tt.accent }} />
+                        <span className="tpl-pill tpl-pill-sm" style={{ background: tt.accent, opacity: 0.55 }} />
+                      </button>
+                      <div className="tpl-foot">
+                        <span className="tpl-name" title={t.name}>{t.name}</span>
+                        <button
+                          className="icon-btn tpl-del"
+                          onClick={() => deleteTemplate(t)}
+                          aria-label={`Delete ${t.name}`}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </section>
 
           <section className="card">
@@ -547,6 +635,31 @@ export default function PageEditor({ params }) {
           <p className="hint preview-hint">Live preview</p>
         </div>
       </div>
+
+      {savingTpl && (
+        <Modal title="Save design as template" onClose={() => setSavingTpl(false)}>
+          <label className="field">
+            <span>Template name</span>
+            <input
+              autoFocus
+              placeholder="Pink & bold"
+              value={tplName}
+              onChange={(e) => setTplName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && saveTemplate()}
+            />
+          </label>
+          <p className="hint">
+            Saves colours, font, button style, background image and options —
+            not the buttons or the text of this page.
+          </p>
+          <div className="modal-foot">
+            <button className="ghost" onClick={() => setSavingTpl(false)}>Cancel</button>
+            <button onClick={saveTemplate}>Save template</button>
+          </div>
+        </Modal>
+      )}
+
+      <Toast toast={toast} />
     </main>
   );
 }

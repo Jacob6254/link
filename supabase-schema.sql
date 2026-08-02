@@ -87,3 +87,14 @@ alter table public.page_buttons add column if not exists animation text;  -- non
 
 -- ===== v5 : les pages bio rejoignent les groupes (Link Manager unifié) =====
 alter table public.pages add column if not exists group_id bigint references public.groups(id) on delete set null;
+
+-- ===== v6 : templates de design réutilisables =====
+create table if not exists public.templates (
+  id bigint generated always as identity primary key,
+  created_at timestamptz not null default now(),
+  owner text,
+  name text not null,
+  theme jsonb not null default '{}'::jsonb
+);
+alter table public.templates enable row level security;
+-- Aucune policy : seule la service_role key (serveur) peut lire/écrire.

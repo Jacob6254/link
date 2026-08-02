@@ -1,7 +1,8 @@
 // app/dashboard/links/page.js
 "use client";
 // Link Manager : pages bio ET liens courts réunis, organisés par groupes.
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Loader, Modal, RowMenu, Toast } from "../ui";
 
 const TREND_W = 60;
 const TREND_H = 20;
@@ -25,91 +26,6 @@ function Trend({ byDay }) {
         strokeLinejoin="round"
       />
     </svg>
-  );
-}
-
-// ===== Menu d'actions (⋮) =====
-function RowMenu({ children }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-
-  useEffect(() => {
-    if (!open) return;
-    function onDoc(e) {
-      if (!ref.current?.contains(e.target)) setOpen(false);
-    }
-    function onEsc(e) {
-      if (e.key === "Escape") setOpen(false);
-    }
-    document.addEventListener("mousedown", onDoc);
-    document.addEventListener("keydown", onEsc);
-    return () => {
-      document.removeEventListener("mousedown", onDoc);
-      document.removeEventListener("keydown", onEsc);
-    };
-  }, [open]);
-
-  return (
-    <div className="rowmenu" ref={ref}>
-      <button
-        className="icon-btn"
-        aria-label="Actions"
-        aria-expanded={open}
-        onClick={() => setOpen((o) => !o)}
-      >
-        ⋮
-      </button>
-      {open && (
-        <div className="menu-pop" onClick={() => setOpen(false)}>
-          {children}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ===== Modale =====
-function Modal({ title, onClose, children }) {
-  useEffect(() => {
-    function onEsc(e) {
-      if (e.key === "Escape") onClose();
-    }
-    document.addEventListener("keydown", onEsc);
-    return () => document.removeEventListener("keydown", onEsc);
-  }, [onClose]);
-
-  return (
-    <div className="backdrop" onMouseDown={onClose}>
-      <div
-        className="modal"
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <div className="modal-head">
-          <h2>{title}</h2>
-          <button className="icon-btn" onClick={onClose} aria-label="Close">✕</button>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
-}
-
-function Skeleton() {
-  return (
-    <div className="card">
-      {[0, 1, 2].map((i) => (
-        <div className="sk-row" key={i}>
-          <div className="sk sk-avatar" />
-          <div className="sk-lines">
-            <div className="sk sk-line" style={{ width: "35%" }} />
-            <div className="sk sk-line" style={{ width: "55%" }} />
-          </div>
-        </div>
-      ))}
-    </div>
   );
 }
 
@@ -337,7 +253,7 @@ export default function LinkManager() {
       </header>
 
       {error && <p className="error">{error}</p>}
-      {!data && <Skeleton />}
+      {!data && <Loader label="Loading your links" />}
 
       {data &&
         sections.map((section, si) => {
@@ -447,6 +363,7 @@ export default function LinkManager() {
                               Edit link
                             </button>
                           )}
+                          <a href={`/dashboard/stats/${it.slug}`}>View stats</a>
                           <a href={`/${it.slug}`} target="_blank" rel="noreferrer">
                             Open ↗
                           </a>
@@ -632,11 +549,7 @@ export default function LinkManager() {
         </Modal>
       )}
 
-      {toast && (
-        <div className={`toast ${toast.kind === "err" ? "toast-err" : ""}`} role="status">
-          {toast.message}
-        </div>
-      )}
+      <Toast toast={toast} />
     </main>
   );
 }
