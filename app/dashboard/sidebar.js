@@ -3,13 +3,13 @@
 import { usePathname } from "next/navigation";
 
 const NAV = [
-  { href: "/dashboard/pages", label: "My pages", icon: "🧩" },
-  { href: "/dashboard/links", label: "Short links", icon: "🔗" },
-  { href: "/dashboard/groups", label: "Groups", icon: "🗂️" },
-  { href: "/dashboard/stats", label: "Analytics", icon: "📊" },
+  { href: "/dashboard/links", label: "Links", icon: "🔗", match: ["/dashboard/links", "/dashboard/pages"] },
+  { href: "/dashboard/stats", label: "Analytics", icon: "📊", match: ["/dashboard/stats"] },
 ];
 
-const ADMIN_NAV = [{ href: "/dashboard/profiles", label: "Profiles", icon: "👥" }];
+const ADMIN_NAV = [
+  { href: "/dashboard/profiles", label: "Profiles", icon: "👥", match: ["/dashboard/profiles"] },
+];
 
 export default function Sidebar({ role, username }) {
   const pathname = usePathname();
@@ -23,16 +23,19 @@ export default function Sidebar({ role, username }) {
       </a>
 
       <nav className="sidebar-nav">
-        {items.map((item) => (
-          <a
-            key={item.href}
-            href={item.href}
-            className={pathname.startsWith(item.href) ? "nav-item active" : "nav-item"}
-          >
-            <span className="nav-icon" aria-hidden="true">{item.icon}</span>
-            <span className="nav-label">{item.label}</span>
-          </a>
-        ))}
+        {items.map((item) => {
+          const active = item.match.some((m) => pathname.startsWith(m));
+          return (
+            <a
+              key={item.href}
+              href={item.href}
+              className={active ? "nav-item active" : "nav-item"}
+            >
+              <span className="nav-icon" aria-hidden="true">{item.icon}</span>
+              <span className="nav-label">{item.label}</span>
+            </a>
+          );
+        })}
       </nav>
 
       <div className="sidebar-foot">

@@ -1,210 +1,642 @@
 // app/dashboard/links/page.js
 "use client";
-// Gestion de ses liens : création, édition, suppression, groupe.
-import { useCallback, useEffect, useState } from "react";
+// Link Manager : pages bio ET liens courts réunis, organisés par groupes.
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-const EMPTY = { slug: "", label: "", web_url: "", group_id: "" };
+const TREND_W = 60;
+const TREND_H = 20;
 
-export default function LinksPage() {
-  const [links, setLinks] = useState(null);
-  const [groups, setGroups] = useState([]);
-  const [form, setForm] = useState(EMPTY);
-  const [editId, setEditId] = useState(null);
-  const [editForm, setEditForm] = useState(EMPTY);
+// ===== Sparkline des 7 derniers jours =====
+function Trend({ byDay }) {
+  const max = Math.max(1, ...byDay);
+  const step = TREND_W / Math.max(1, byDay.length - 1);
+  const pts = byDay
+    .map((n, i) => `${(i * step).toFixed(1)},${(TREND_H - (n / max) * TREND_H).toFixed(1)}`)
+    .join(" ");
+  const rising = byDay[byDay.length - 1] >= byDay[0];
+  return (
+    <svg className="trend" viewBox={`0 0 ${TREND_W} ${TREND_H}`} aria-hidden="true">
+      <polyline
+        points={pts}
+        fill="none"
+        stroke={rising ? "#199e70" : "#d95926"}
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+// ===== Menu d'actions (⋮) =====
+function RowMenu({ children }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onDoc(e) {
+      if (!ref.current?.contains(e.target)) setOpen(false);
+    }
+    function onEsc(e) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onEsc);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onEsc);
+    };
+  }, [open]);
+
+  return (
+    <div className="rowmenu" ref={ref}>
+      <button
+        className="icon-btn"
+        aria-label="Actions"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+      >
+        ⋮
+      </button>
+      {open && (
+        <div className="menu-pop" onClick={() => setOpen(false)}>
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ===== Modale =====
+function Modal({ title, onClose, children }) {
+  useEffect(() => {
+    function onEsc(e) {
+      if (e.key === "Escape") onClose();
+    }
+    document.addEventListener("keydown", onEsc);
+    return () => document.removeEventListener("keydown", onEsc);
+  }, [onClose]);
+
+  return (
+    <div className="backdrop" onMouseDown={onClose}>
+      <div
+        className="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <div className="modal-head">
+          <h2>{title}</h2>
+          <button className="icon-btn" onClick={onClose} aria-label="Close">✕</button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function Skeleton() {
+  return (
+    <div className="card">
+      {[0, 1, 2].map((i) => (
+        <div className="sk-row" key={i}>
+          <div className="sk sk-avatar" />
+          <div className="sk-lines">
+            <div className="sk sk-line" style={{ width: "35%" }} />
+            <div className="sk sk-line" style={{ width: "55%" }} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+const NEW_PAGE = { slug: "", title: "" };
+const NEW_LINK = { slug: "", label: "", web_url: "" };
+
+export default function LinkManager() {
+  const [data, setData] = useState(null);
   const [error, setError] = useState("");
-  const [copied, setCopied] = useState(null);
+  const [toast, setToast] = useState(null);
+  const [query, setQuery] = useState("");
+  const [collapsed, setCollapsed] = useState({});
+  const [creating, setCreating] = useState(null); // "page" | "link" | "group"
+  const [pageForm, setPageForm] = useState(NEW_PAGE);
+  const [linkForm, setLinkForm] = useState(NEW_LINK);
+  const [groupName, setGroupName] = useState("");
+  const [editLink, setEditLink] = useState(null);
+  const [renameGroup, setRenameGroup] = useState(null);
+  const [busy, setBusy] = useState(false);
   const [origin, setOrigin] = useState("");
 
   useEffect(() => setOrigin(window.location.origin), []);
 
+  function flash(message, kind = "ok") {
+    setToast({ message, kind });
+    setTimeout(() => setToast(null), 2600);
+  }
+
   const load = useCallback(async () => {
-    const [l, g] = await Promise.all([fetch("/api/links"), fetch("/api/groups")]);
-    if (l.status === 401) {
+    const res = await fetch("/api/manager");
+    if (res.status === 401) {
       window.location.href = "/login?next=/dashboard/links";
       return;
     }
-    if (!l.ok) {
-      const data = await l.json().catch(() => ({}));
-      setError(data.error || "Failed to load");
-      setLinks([]);
-    } else {
-      setLinks(await l.json());
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      setError(d.error || "Failed to load");
+      setData({ groups: [], items: [] });
+      return;
     }
-    setGroups(g.ok ? await g.json() : []);
+    setError("");
+    setData(await res.json());
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
-  async function createLink() {
-    setError("");
-    const res = await fetch("/api/links", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, group_id: form.group_id || null }),
-    });
-    const data = await res.json();
-    if (!res.ok) return setError(data.error || "Something went wrong");
-    setForm(EMPTY);
-    load();
+  const sections = useMemo(() => {
+    if (!data) return [];
+    const q = query.trim().toLowerCase();
+    const match = (it) =>
+      !q ||
+      it.title.toLowerCase().includes(q) ||
+      it.slug.toLowerCase().includes(q) ||
+      (it.subtitle || "").toLowerCase().includes(q);
+    const items = data.items.filter(match);
+    const out = data.groups
+      .map((g) => ({ ...g, items: items.filter((i) => i.group_id === g.id) }))
+      .filter((g) => g.items.length > 0 || !q);
+    const knownIds = new Set(data.groups.map((g) => g.id));
+    const ungrouped = items.filter((i) => !i.group_id || !knownIds.has(i.group_id));
+    return [{ id: null, name: "Ungrouped", items: ungrouped }, ...out].filter(
+      (s) => s.items.length > 0 || (!q && s.id !== null)
+    );
+  }, [data, query]);
+
+  const total = data?.items.length || 0;
+  const shown = sections.reduce((n, s) => n + s.items.length, 0);
+
+  // ===== Actions =====
+  async function api(url, options, okMessage) {
+    setBusy(true);
+    const res = await fetch(url, options);
+    const d = await res.json().catch(() => ({}));
+    setBusy(false);
+    if (!res.ok) {
+      flash(d.error || "Something went wrong", "err");
+      return null;
+    }
+    if (okMessage) flash(okMessage);
+    await load();
+    return d;
   }
 
-  async function saveEdit(id) {
-    setError("");
-    const res = await fetch(`/api/links/${id}`, {
+  async function createPage() {
+    const d = await api(
+      "/api/pages",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(pageForm),
+      },
+      null
+    );
+    if (d) window.location.href = `/dashboard/pages/${d.id}`;
+  }
+
+  async function createLink() {
+    const d = await api(
+      "/api/links",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(linkForm),
+      },
+      "Short link created"
+    );
+    if (d) {
+      setLinkForm(NEW_LINK);
+      setCreating(null);
+    }
+  }
+
+  async function createGroup() {
+    const d = await api(
+      "/api/groups",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: groupName }),
+      },
+      "Group created"
+    );
+    if (d) {
+      setGroupName("");
+      setCreating(null);
+    }
+  }
+
+  async function saveLink() {
+    const d = await api(
+      `/api/links/${editLink.id}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editLink),
+      },
+      "Link updated"
+    );
+    if (d) setEditLink(null);
+  }
+
+  async function saveGroupName() {
+    const d = await api(
+      `/api/groups/${renameGroup.id}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: renameGroup.name }),
+      },
+      "Group renamed"
+    );
+    if (d) setRenameGroup(null);
+  }
+
+  async function moveTo(item, groupId) {
+    const url = item.kind === "page" ? `/api/pages/${item.id}` : `/api/links/${item.id}`;
+    const body =
+      item.kind === "page"
+        ? { group_id: groupId }
+        : {
+            slug: item.slug,
+            label: item.title,
+            web_url: item.web_url,
+            group_id: groupId,
+          };
+    await api(url, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...editForm, group_id: editForm.group_id || null }),
-    });
-    const data = await res.json();
-    if (!res.ok) return setError(data.error || "Something went wrong");
-    setEditId(null);
-    load();
+      body: JSON.stringify(body),
+    }, "Moved");
   }
 
-  async function removeLink(id, label) {
-    if (!confirm(`Delete “${label}”?`)) return;
-    await fetch(`/api/links/${id}`, { method: "DELETE" });
-    load();
+  async function removeItem(item) {
+    const what = item.kind === "page" ? "page and all its buttons" : "short link";
+    if (!confirm(`Delete “${item.title}”? This removes the ${what}.`)) return;
+    const url = item.kind === "page" ? `/api/pages/${item.id}` : `/api/links/${item.id}`;
+    await api(url, { method: "DELETE" }, "Deleted");
   }
 
-  function startEdit(l) {
-    setEditId(l.id);
-    setEditForm({
-      slug: l.slug, label: l.label, web_url: l.web_url,
-      group_id: l.group_id ? String(l.group_id) : "",
-    });
+  async function removeGroup(g) {
+    const n = data.items.filter((i) => i.group_id === g.id).length;
+    const extra = n > 0 ? ` Its ${n} item(s) become ungrouped.` : "";
+    if (!confirm(`Delete group “${g.name}”?${extra}`)) return;
+    await api(`/api/groups/${g.id}`, { method: "DELETE" }, "Group deleted");
   }
 
-  function copyUrl(slug) {
+  function copy(slug) {
     navigator.clipboard.writeText(`${origin}/${slug}`);
-    setCopied(slug);
-    setTimeout(() => setCopied(null), 1500);
+    flash("Link copied to clipboard");
   }
-
-  if (links === null) return <main className="panel"><p className="hint">Loading…</p></main>;
-
-  // Liens rangés par groupe, "sans groupe" en dernier.
-  const sections = [
-    ...groups
-      .map((g) => ({ key: g.id, name: g.name, items: links.filter((l) => l.group_id === g.id) }))
-      .filter((s) => s.items.length > 0),
-    {
-      key: "none",
-      name: "Ungrouped",
-      items: links.filter((l) => !l.group_id || !groups.some((g) => g.id === l.group_id)),
-    },
-  ].filter((s) => s.items.length > 0);
 
   return (
-    <main className="panel">
-      <h1>My links</h1>
-
-      <section className="card">
-        <h2>Add a link</h2>
-        <div className="form-row">
-          <input
-            placeholder="slug (e.g. insta)"
-            value={form.slug}
-            onChange={(e) => setForm({ ...form, slug: e.target.value })}
-          />
-          <input
-            placeholder="Button label"
-            value={form.label}
-            onChange={(e) => setForm({ ...form, label: e.target.value })}
-          />
+    <main className="panel wide">
+      <header className="mgr-head">
+        <div>
+          <h1>Link Manager</h1>
+          <p className="hint">
+            {data ? (
+              <>
+                Showing <strong>{shown}</strong>
+                {shown !== total && <> of {total}</>} item{total === 1 ? "" : "s"}
+              </>
+            ) : (
+              "Loading…"
+            )}
+          </p>
         </div>
-        <div className="form-row">
-          <input
-            placeholder="Destination URL (e.g. https://www.instagram.com/name/)"
-            value={form.web_url}
-            onChange={(e) => setForm({ ...form, web_url: e.target.value })}
-          />
-          <select
-            value={form.group_id}
-            onChange={(e) => setForm({ ...form, group_id: e.target.value })}
-          >
-            <option value="">No group</option>
-            {groups.map((g) => (
-              <option key={g.id} value={g.id}>{g.name}</option>
-            ))}
-          </select>
-        </div>
-        <button onClick={createLink}>Add link</button>
-        {error && <p className="error">{error}</p>}
-        <p className="hint">
-          Your short link will be <span className="mono">{origin || ""}/slug</span> —
-          Android and iOS deep links are generated automatically (Instagram,
-          TikTok, YouTube, X, Snapchat and more).
-        </p>
-      </section>
-
-      <section className="card">
-        <h2>Active links <span className="count">{links.length}</span></h2>
-        {links.length === 0 && <p className="hint">No links yet.</p>}
-        {sections.map((section) => (
-          <div className="link-section" key={section.key}>
-            <h3 className="section-title">
-              {section.name} <span className="section-count">{section.items.length}</span>
-            </h3>
-            <ul className="link-list">
-              {section.items.map((l) =>
-                editId === l.id ? (
-                  <li key={l.id} className="editing">
-                    <div className="form-row">
-                      <input
-                        value={editForm.slug}
-                        onChange={(e) => setEditForm({ ...editForm, slug: e.target.value })}
-                      />
-                      <input
-                        value={editForm.label}
-                        onChange={(e) => setEditForm({ ...editForm, label: e.target.value })}
-                      />
-                    </div>
-                    <div className="form-row">
-                      <input
-                        value={editForm.web_url}
-                        onChange={(e) => setEditForm({ ...editForm, web_url: e.target.value })}
-                      />
-                      <select
-                        value={editForm.group_id}
-                        onChange={(e) => setEditForm({ ...editForm, group_id: e.target.value })}
-                      >
-                        <option value="">No group</option>
-                        {groups.map((g) => (
-                          <option key={g.id} value={g.id}>{g.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="actions">
-                      <button onClick={() => saveEdit(l.id)}>Save</button>
-                      <button className="ghost" onClick={() => setEditId(null)}>Cancel</button>
-                    </div>
-                  </li>
-                ) : (
-                  <li key={l.id}>
-                    <div className="link-info">
-                      <strong>{l.label}</strong>
-                      <span className="mono">/{l.slug}</span>
-                      {l.owner && <span className="badge badge-dim">{l.owner}</span>}
-                      <br />
-                      <span className="hint">{l.web_url}</span>
-                    </div>
-                    <div className="actions">
-                      <button className="ghost" onClick={() => copyUrl(l.slug)}>
-                        {copied === l.slug ? "Copied ✓" : "Copy"}
-                      </button>
-                      <button className="ghost" onClick={() => startEdit(l)}>Edit</button>
-                      <button className="danger" onClick={() => removeLink(l.id, l.label)}>
-                        Delete
-                      </button>
-                    </div>
-                  </li>
-                )
-              )}
-            </ul>
+        <div className="mgr-actions">
+          <div className="search">
+            <span aria-hidden="true">⌕</span>
+            <input
+              placeholder="Search…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
           </div>
-        ))}
-      </section>
+          <button className="ghost" onClick={() => setCreating("group")}>
+            + Group
+          </button>
+          <button className="ghost" onClick={() => setCreating("link")}>
+            + Short link
+          </button>
+          <button onClick={() => setCreating("page")}>+ Create page</button>
+        </div>
+      </header>
+
+      {error && <p className="error">{error}</p>}
+      {!data && <Skeleton />}
+
+      {data &&
+        sections.map((section, si) => {
+          const open = !collapsed[String(section.id)];
+          const weekTotal = section.items.reduce((n, i) => n + i.stats.week, 0);
+          return (
+            <section
+              className="card group-card"
+              key={String(section.id)}
+              style={{ animationDelay: `${si * 45}ms` }}
+            >
+              <div className="group-head">
+                <button
+                  className="chev"
+                  aria-expanded={open}
+                  onClick={() =>
+                    setCollapsed((c) => ({ ...c, [String(section.id)]: open }))
+                  }
+                >
+                  <span className={open ? "chev-icon open" : "chev-icon"}>▸</span>
+                </button>
+                <h2>{section.name}</h2>
+                <span className="count">{section.items.length}</span>
+                <span className="group-stat">{weekTotal} clicks · 7d</span>
+                {section.id !== null && (
+                  <RowMenu>
+                    <button onClick={() => setRenameGroup({ ...section })}>Rename</button>
+                    <button className="pop-danger" onClick={() => removeGroup(section)}>
+                      Delete group
+                    </button>
+                  </RowMenu>
+                )}
+              </div>
+
+              {open && (
+                <ul className="rows">
+                  {section.items.length === 0 && (
+                    <li className="row-empty hint">
+                      Nothing here yet — create a page or a short link.
+                    </li>
+                  )}
+                  {section.items.map((it) => (
+                    <li className="row" key={`${it.kind}-${it.id}`}>
+                      <div className="row-ident">
+                        {it.kind === "page" ? (
+                          /^https?:\/\//i.test(it.avatar || "") ? (
+                            /* eslint-disable-next-line @next/next/no-img-element */
+                            <img className="row-av" src={it.avatar} alt="" />
+                          ) : (
+                            <span className="row-av row-av-text">
+                              {(it.avatar || it.title || "?").trim()[0] || "?"}
+                            </span>
+                          )
+                        ) : (
+                          <span className="row-av row-av-link" aria-hidden="true">🔗</span>
+                        )}
+                        <div className="row-text">
+                          <div className="row-title">
+                            <strong>{it.title}</strong>
+                            <span className={`chip chip-${it.kind}`}>
+                              {it.kind === "page" ? "Page" : "Link"}
+                            </span>
+                            {it.owner && data.groups && (
+                              <span className="chip chip-dim">{it.owner}</span>
+                            )}
+                          </div>
+                          <a
+                            className="row-url mono"
+                            href={`/${it.slug}`}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            {(origin || "").replace(/^https?:\/\//, "")}/{it.slug}
+                          </a>
+                          {it.kind === "link" && (
+                            <span className="row-dest hint">→ {it.subtitle}</span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="row-metrics">
+                        <Trend byDay={it.stats.byDay} />
+                        <div className="metric">
+                          <span className="metric-value">{it.stats.today}</span>
+                          <span className="metric-label">today</span>
+                        </div>
+                        <div className="metric">
+                          <span className="metric-value">{it.stats.week}</span>
+                          <span className="metric-label">7 days</span>
+                        </div>
+                        <RowMenu>
+                          <button onClick={() => copy(it.slug)}>Copy URL</button>
+                          {it.kind === "page" ? (
+                            <a href={`/dashboard/pages/${it.id}`}>Edit page</a>
+                          ) : (
+                            <button
+                              onClick={() =>
+                                setEditLink({
+                                  id: it.id,
+                                  slug: it.slug,
+                                  label: it.title,
+                                  web_url: it.web_url,
+                                  group_id: it.group_id || "",
+                                })
+                              }
+                            >
+                              Edit link
+                            </button>
+                          )}
+                          <a href={`/${it.slug}`} target="_blank" rel="noreferrer">
+                            Open ↗
+                          </a>
+                          <div className="pop-sep">Move to</div>
+                          <button onClick={() => moveTo(it, null)}>Ungrouped</button>
+                          {data.groups.map((g) => (
+                            <button key={g.id} onClick={() => moveTo(it, g.id)}>
+                              {g.name}
+                            </button>
+                          ))}
+                          <button className="pop-danger" onClick={() => removeItem(it)}>
+                            Delete
+                          </button>
+                        </RowMenu>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          );
+        })}
+
+      {data && total === 0 && !query && (
+        <div className="card empty-state">
+          <span className="empty-icon" aria-hidden="true">🧩</span>
+          <h2>Nothing here yet</h2>
+          <p className="hint">
+            Create a landing page for your bio, or a short link that opens straight
+            in the native app.
+          </p>
+          <div className="empty-actions">
+            <button onClick={() => setCreating("page")}>+ Create page</button>
+            <button className="ghost" onClick={() => setCreating("link")}>
+              + Short link
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ===== Modales ===== */}
+      {creating === "page" && (
+        <Modal title="Create a landing page" onClose={() => setCreating(null)}>
+          <label className="field">
+            <span>Page title</span>
+            <input
+              autoFocus
+              placeholder="Your Name"
+              value={pageForm.title}
+              onChange={(e) => setPageForm({ ...pageForm, title: e.target.value })}
+            />
+          </label>
+          <label className="field">
+            <span>Slug</span>
+            <input
+              placeholder="yourname"
+              value={pageForm.slug}
+              onChange={(e) => setPageForm({ ...pageForm, slug: e.target.value })}
+              onKeyDown={(e) => e.key === "Enter" && createPage()}
+            />
+          </label>
+          <p className="hint">
+            Will live at{" "}
+            <span className="mono">
+              {(origin || "").replace(/^https?:\/\//, "")}/{pageForm.slug || "slug"}
+            </span>
+          </p>
+          <div className="modal-foot">
+            <button className="ghost" onClick={() => setCreating(null)}>Cancel</button>
+            <button onClick={createPage} disabled={busy}>
+              {busy ? "Creating…" : "Create & edit"}
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {creating === "link" && (
+        <Modal title="Create a short link" onClose={() => setCreating(null)}>
+          <label className="field">
+            <span>Label</span>
+            <input
+              autoFocus
+              placeholder="My Instagram"
+              value={linkForm.label}
+              onChange={(e) => setLinkForm({ ...linkForm, label: e.target.value })}
+            />
+          </label>
+          <label className="field">
+            <span>Destination URL</span>
+            <input
+              placeholder="https://www.instagram.com/name/"
+              value={linkForm.web_url}
+              onChange={(e) => setLinkForm({ ...linkForm, web_url: e.target.value })}
+            />
+          </label>
+          <label className="field">
+            <span>Slug</span>
+            <input
+              placeholder="insta"
+              value={linkForm.slug}
+              onChange={(e) => setLinkForm({ ...linkForm, slug: e.target.value })}
+              onKeyDown={(e) => e.key === "Enter" && createLink()}
+            />
+          </label>
+          <p className="hint">
+            Opens the native app when possible, and every click is tracked.
+          </p>
+          <div className="modal-foot">
+            <button className="ghost" onClick={() => setCreating(null)}>Cancel</button>
+            <button onClick={createLink} disabled={busy}>
+              {busy ? "Creating…" : "Create link"}
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {creating === "group" && (
+        <Modal title="Create a group" onClose={() => setCreating(null)}>
+          <label className="field">
+            <span>Group name</span>
+            <input
+              autoFocus
+              placeholder="Main account"
+              value={groupName}
+              onChange={(e) => setGroupName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && createGroup()}
+            />
+          </label>
+          <div className="modal-foot">
+            <button className="ghost" onClick={() => setCreating(null)}>Cancel</button>
+            <button onClick={createGroup} disabled={busy}>Create</button>
+          </div>
+        </Modal>
+      )}
+
+      {editLink && (
+        <Modal title="Edit short link" onClose={() => setEditLink(null)}>
+          <label className="field">
+            <span>Label</span>
+            <input
+              autoFocus
+              value={editLink.label}
+              onChange={(e) => setEditLink({ ...editLink, label: e.target.value })}
+            />
+          </label>
+          <label className="field">
+            <span>Destination URL</span>
+            <input
+              value={editLink.web_url}
+              onChange={(e) => setEditLink({ ...editLink, web_url: e.target.value })}
+            />
+          </label>
+          <label className="field">
+            <span>Slug</span>
+            <input
+              value={editLink.slug}
+              onChange={(e) => setEditLink({ ...editLink, slug: e.target.value })}
+              onKeyDown={(e) => e.key === "Enter" && saveLink()}
+            />
+          </label>
+          <div className="modal-foot">
+            <button className="ghost" onClick={() => setEditLink(null)}>Cancel</button>
+            <button onClick={saveLink} disabled={busy}>Save</button>
+          </div>
+        </Modal>
+      )}
+
+      {renameGroup && (
+        <Modal title="Rename group" onClose={() => setRenameGroup(null)}>
+          <label className="field">
+            <span>Group name</span>
+            <input
+              autoFocus
+              value={renameGroup.name}
+              onChange={(e) => setRenameGroup({ ...renameGroup, name: e.target.value })}
+              onKeyDown={(e) => e.key === "Enter" && saveGroupName()}
+            />
+          </label>
+          <div className="modal-foot">
+            <button className="ghost" onClick={() => setRenameGroup(null)}>Cancel</button>
+            <button onClick={saveGroupName} disabled={busy}>Save</button>
+          </div>
+        </Modal>
+      )}
+
+      {toast && (
+        <div className={`toast ${toast.kind === "err" ? "toast-err" : ""}`} role="status">
+          {toast.message}
+        </div>
+      )}
     </main>
   );
 }

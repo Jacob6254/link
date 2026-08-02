@@ -68,6 +68,9 @@ export async function PATCH(request, { params }) {
   if (body.theme !== undefined) {
     patch.theme = sanitizeTheme(body.theme);
   }
+  if (body.group_id !== undefined) {
+    patch.group_id = body.group_id ? Number(body.group_id) : null;
+  }
   if (Object.keys(patch).length === 0) {
     return Response.json({ error: "Nothing to update" }, { status: 400 });
   }

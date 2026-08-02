@@ -70,7 +70,7 @@ export default function PageEditor({ params }) {
   const load = useCallback(async () => {
     const res = await fetch(`/api/pages/${id}`);
     if (res.status === 401) {
-      window.location.href = "/login?next=/dashboard/pages";
+      window.location.href = "/login?next=/dashboard/links";
       return;
     }
     if (!res.ok) {
@@ -201,7 +201,7 @@ export default function PageEditor({ params }) {
     <main className="panel editor">
       <div className="editor-head">
         <h1>
-          <a className="back" href="/dashboard/pages">←</a> {page.title}
+          <a className="back" href="/dashboard/links">←</a> {page.title}
           <a
             className="mono page-url"
             href={`/${page.slug}`}

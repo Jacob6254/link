@@ -84,3 +84,6 @@ alter table public.clicks add column if not exists button_id bigint; -- clic ven
 -- automatiquement par le serveur au premier upload — rien à faire côté Storage.
 alter table public.page_buttons add column if not exists image text;      -- URL d'image (bouton bannière)
 alter table public.page_buttons add column if not exists animation text;  -- none | bounce | pulse | wiggle
+
+-- ===== v5 : les pages bio rejoignent les groupes (Link Manager unifié) =====
+alter table public.pages add column if not exists group_id bigint references public.groups(id) on delete set null;
