@@ -5,7 +5,7 @@ import { cookies } from "next/headers";
 import { verifySession } from "@/lib/session";
 import Sidebar from "./sidebar";
 
-export const metadata = { title: "Dashboard — Mes liens" };
+export const metadata = { title: "Dashboard — AllMySocials" };
 
 export default async function DashboardLayout({ children }) {
   const token = (await cookies()).get("session")?.value;

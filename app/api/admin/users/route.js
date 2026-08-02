@@ -13,7 +13,7 @@ export async function GET(request) {
   } catch (err) {
     if (String(err.message || "").includes("PGRST205")) {
       return Response.json(
-        { error: "Table users absente : exécutez le bloc « users » de supabase-schema.sql" },
+        { error: "Missing users table: run supabase-schema.sql in Supabase > SQL Editor" },
         { status: 500 }
       );
     }
@@ -30,19 +30,19 @@ export async function POST(request) {
 
   if (!/^[a-z0-9_-]{3,30}$/.test(username)) {
     return Response.json(
-      { error: "Identifiant invalide (3-30 caractères : lettres, chiffres, - ou _)" },
+      { error: "Invalid username (3-30 characters: letters, digits, - or _)" },
       { status: 400 }
     );
   }
   if (username === "admin") {
     return Response.json(
-      { error: "« admin » est réservé au compte de secours" },
+      { error: "\"admin\" is reserved for the fallback account" },
       { status: 400 }
     );
   }
   if (password.length < 6) {
     return Response.json(
-      { error: "Mot de passe trop court (6 caractères minimum)" },
+      { error: "Password too short (6 characters minimum)" },
       { status: 400 }
     );
   }
@@ -58,9 +58,9 @@ export async function POST(request) {
   } catch (err) {
     const msg = String(err.message || "");
     if (msg.includes("23505") || msg.includes("duplicate")) {
-      return Response.json({ error: "Cet identifiant existe déjà" }, { status: 409 });
+      return Response.json({ error: "That username already exists" }, { status: 409 });
     }
     console.error(err);
-    return Response.json({ error: "Erreur serveur" }, { status: 500 });
+    return Response.json({ error: "Server error" }, { status: 500 });
   }
 }

@@ -13,12 +13,21 @@ function flagEmoji(code) {
 }
 
 function countryName(code) {
-  if (!/^[A-Z]{2}$/.test(code)) return "Inconnu";
+  if (!/^[A-Z]{2}$/.test(code)) return "Unknown";
   try {
-    return new Intl.DisplayNames(["fr"], { type: "region" }).of(code) || code;
+    return new Intl.DisplayNames(["en"], { type: "region" }).of(code) || code;
   } catch {
     return code;
   }
+}
+
+// "2026-07-31" -> "Jul 31"
+function shortDate(day) {
+  return new Date(`${day}T00:00:00Z`).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
 }
 
 // ===== Graphique barres : clics par jour =====
@@ -40,7 +49,7 @@ function DayChart({ byDay }) {
   return (
     <div className="chart-wrap">
       <svg viewBox={`0 0 ${W} ${H}`} className="chart" role="img"
-        aria-label="Clics par jour sur 30 jours">
+        aria-label="Clicks per day over 30 days">
         {gridLines.map((v) => {
           const y = PAD_T + innerH - (v / max) * innerH;
           return (
@@ -78,14 +87,14 @@ function DayChart({ byDay }) {
           i % 5 === 0 ? (
             <text key={day} x={PAD_L + i * step + step / 2} y={H - 6}
               className="tick" textAnchor="middle">
-              {day.slice(8, 10)}/{day.slice(5, 7)}
+              {shortDate(day)}
             </text>
           ) : null
         )}
       </svg>
       {tip && (
         <div className="chart-tip" style={{ left: `${((PAD_L + tip.i * step + step / 2) / W) * 100}%` }}>
-          <strong>{tip.n}</strong> clic{tip.n > 1 ? "s" : ""} — {tip.day.slice(8, 10)}/{tip.day.slice(5, 7)}
+          <strong>{tip.n}</strong> click{tip.n === 1 ? "" : "s"} — {shortDate(tip.day)}
         </div>
       )}
     </div>
@@ -115,7 +124,7 @@ export default function StatsPage() {
       }
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data.error || "Erreur de chargement");
+        setError(data.error || "Failed to load");
         return;
       }
       setStats(await res.json());
@@ -123,7 +132,7 @@ export default function StatsPage() {
   }, []);
 
   if (error) return <main className="panel"><p className="error">{error}</p></main>;
-  if (!stats) return <main className="panel"><p className="hint">Chargement…</p></main>;
+  if (!stats) return <main className="panel"><p className="hint">Loading…</p></main>;
 
   const { total, byDay, byLink, byPlatform, byCountry, byGroup = [], windowDays, capped } = stats;
   const bestLink = byLink[0];
@@ -134,51 +143,51 @@ export default function StatsPage() {
   const maxCountry = Math.max(1, ...byCountry.map((c) => c.total));
   const maxLink = Math.max(1, ...byLink.map((l) => l.total));
   const maxGroup = Math.max(1, ...byGroup.map((g) => g.total));
-  // Un seul groupe "Sans groupe" = rien à comparer, on masque la section.
-  const showGroups = byGroup.length > 1 || (byGroup[0] && byGroup[0].name !== "Sans groupe");
+  // Un seul groupe "Ungrouped" = rien à comparer, on masque la section.
+  const showGroups = byGroup.length > 1 || (byGroup[0] && byGroup[0].name !== "Ungrouped");
 
   return (
     <main className="panel">
-      <h1>Statistiques <span className="hint">— {windowDays} derniers jours{capped ? " (fenêtre pleine)" : ""}</span></h1>
+      <h1>Analytics <span className="hint">— last {windowDays} days{capped ? " (window full)" : ""}</span></h1>
 
       <div className="tiles">
         <div className="tile">
-          <span className="tile-label">Clics</span>
+          <span className="tile-label">Clicks</span>
           <span className="tile-value">{total}</span>
         </div>
         <div className="tile">
-          <span className="tile-label">Meilleur lien</span>
+          <span className="tile-label">Top link</span>
           <span className="tile-value tile-small">
             {bestLink ? `/${bestLink.slug}` : "—"}
           </span>
-          {bestLink && <span className="tile-sub">{bestLink.total} clics</span>}
+          {bestLink && <span className="tile-sub">{bestLink.total} clicks</span>}
         </div>
         <div className="tile">
-          <span className="tile-label">Top pays</span>
+          <span className="tile-label">Top country</span>
           <span className="tile-value tile-small">
             {bestCountry ? `${flagEmoji(bestCountry.code)} ${countryName(bestCountry.code)}` : "—"}
           </span>
-          {bestCountry && <span className="tile-sub">{bestCountry.total} clics</span>}
+          {bestCountry && <span className="tile-sub">{bestCountry.total} clicks</span>}
         </div>
         <div className="tile">
-          <span className="tile-label">Top plateforme</span>
+          <span className="tile-label">Top platform</span>
           <span className="tile-value tile-small">
             {bestPlatform && bestPlatform[1] > 0 ? PLATFORM_LABEL[bestPlatform[0]] : "—"}
           </span>
           {bestPlatform && bestPlatform[1] > 0 && (
-            <span className="tile-sub">{bestPlatform[1]} clics</span>
+            <span className="tile-sub">{bestPlatform[1]} clicks</span>
           )}
         </div>
       </div>
 
       <section className="card">
-        <h2>Clics par jour</h2>
-        {total === 0 ? <p className="hint">Aucun clic sur la période.</p> : <DayChart byDay={byDay} />}
+        <h2>Clicks per day</h2>
+        {total === 0 ? <p className="hint">No clicks in this period.</p> : <DayChart byDay={byDay} />}
       </section>
 
       <div className="two-col">
         <section className="card">
-          <h2>Plateformes</h2>
+          <h2>Platforms</h2>
           {platEntries.map(([key, n]) => (
             <div className="hbar-row" key={key}>
               <span className="hbar-label">
@@ -192,8 +201,8 @@ export default function StatsPage() {
         </section>
 
         <section className="card">
-          <h2>Pays</h2>
-          {byCountry.length === 0 && <p className="hint">Aucune donnée pays pour l&apos;instant.</p>}
+          <h2>Countries</h2>
+          {byCountry.length === 0 && <p className="hint">No country data yet.</p>}
           {byCountry.slice(0, 10).map((c) => (
             <div className="hbar-row" key={c.code}>
               <span className="hbar-label" title={countryName(c.code)}>
@@ -204,15 +213,15 @@ export default function StatsPage() {
             </div>
           ))}
           <p className="hint">
-            Le pays est fourni par l&apos;hébergeur (Vercel) — les clics antérieurs à
-            cette mise à jour apparaissent en « Inconnu ».
+            Country comes from the host (Vercel) — clicks recorded before this
+            feature shipped show up as “Unknown”.
           </p>
         </section>
       </div>
 
       {showGroups && (
         <section className="card">
-          <h2>Par groupe</h2>
+          <h2>By group</h2>
           {byGroup.map((g) => (
             <div className="hbar-row" key={g.name}>
               <span className="hbar-label" title={g.name}>{g.name}</span>
@@ -224,13 +233,13 @@ export default function StatsPage() {
       )}
 
       <section className="card">
-        <h2>Par lien</h2>
-        {byLink.length === 0 && <p className="hint">Aucun clic sur la période.</p>}
+        <h2>By link</h2>
+        {byLink.length === 0 && <p className="hint">No clicks in this period.</p>}
         {byLink.length > 0 && (
           <table>
             <thead>
               <tr>
-                <th>Lien</th>
+                <th>Link</th>
                 <th className="th-bar" aria-hidden="true"></th>
                 <th>Total</th>
                 <th>Android</th>

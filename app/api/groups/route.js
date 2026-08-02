@@ -21,7 +21,7 @@ export async function POST(request) {
   const body = await request.json().catch(() => ({}));
   const name = String(body.name || "").trim();
   if (!name || name.length > 60) {
-    return Response.json({ error: "Nom requis (60 caractères max)" }, { status: 400 });
+    return Response.json({ error: "Name is required (60 characters max)" }, { status: 400 });
   }
   const created = await sb("/groups", {
     method: "POST",

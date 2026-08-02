@@ -16,7 +16,7 @@ export default function ProfilesPage() {
     }
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      setError(data.error || "Erreur");
+      setError(data.error || "Failed to load");
       setUsers([]);
       return;
     }
@@ -33,40 +33,40 @@ export default function ProfilesPage() {
       body: JSON.stringify(form),
     });
     const data = await res.json();
-    if (!res.ok) return setError(data.error || "Erreur");
+    if (!res.ok) return setError(data.error || "Something went wrong");
     setForm({ username: "", password: "", role: "viewer" });
     load();
   }
 
   async function removeUser(id, username) {
-    if (!confirm(`Supprimer le profil « ${username} » ? Ses liens resteront en ligne.`)) return;
+    if (!confirm(`Delete profile “${username}”? Their links stay online.`)) return;
     const res = await fetch(`/api/admin/users/${id}`, { method: "DELETE" });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      setError(data.error || "Erreur");
+      setError(data.error || "Something went wrong");
       return;
     }
     load();
   }
 
-  if (users === null) return <main className="panel"><p className="hint">Chargement…</p></main>;
+  if (users === null) return <main className="panel"><p className="hint">Loading…</p></main>;
 
   return (
     <main className="panel">
-      <h1>Profils</h1>
+      <h1>Profiles</h1>
 
       <section className="card">
-        <h2>Créer un profil</h2>
+        <h2>Create a profile</h2>
         <div className="form-row">
           <input
-            placeholder="Identifiant (ex: paul)"
+            placeholder="Username (e.g. paul)"
             autoComplete="off"
             value={form.username}
             onChange={(e) => setForm({ ...form, username: e.target.value })}
           />
           <input
             type="password"
-            placeholder="Mot de passe (6 caractères min.)"
+            placeholder="Password (6 characters min.)"
             autoComplete="new-password"
             value={form.password}
             onChange={(e) => setForm({ ...form, password: e.target.value })}
@@ -77,17 +77,17 @@ export default function ProfilesPage() {
             value={form.role}
             onChange={(e) => setForm({ ...form, role: e.target.value })}
           >
-            <option value="viewer">Membre — gère ses liens et ses stats</option>
-            <option value="admin">Admin — gère aussi les profils</option>
+            <option value="viewer">Member — manages their own links and stats</option>
+            <option value="admin">Admin — also manages profiles</option>
           </select>
-          <button onClick={createUser}>Créer le profil</button>
+          <button onClick={createUser}>Create profile</button>
         </div>
         {error && <p className="error">{error}</p>}
       </section>
 
       <section className="card">
-        <h2>Profils existants <span className="count">{users.length}</span></h2>
-        {users.length === 0 && <p className="hint">Aucun profil créé.</p>}
+        <h2>Existing profiles <span className="count">{users.length}</span></h2>
+        {users.length === 0 && <p className="hint">No profiles yet.</p>}
         <ul className="link-list">
           {users.map((u) => (
             <li key={u.id}>
@@ -97,20 +97,20 @@ export default function ProfilesPage() {
                 </span>{" "}
                 <strong>{u.username}</strong>
                 <span className={u.role === "admin" ? "badge badge-admin" : "badge"}>
-                  {u.role === "admin" ? "admin" : "membre"}
+                  {u.role === "admin" ? "admin" : "member"}
                 </span>
               </div>
               <div className="actions">
                 <button className="danger" onClick={() => removeUser(u.id, u.username)}>
-                  Supprimer
+                  Delete
                 </button>
               </div>
             </li>
           ))}
         </ul>
         <p className="hint">
-          Le compte de secours <span className="mono">admin</span> (mot de passe
-          ADMIN_PASSWORD) fonctionne toujours, même sans profil créé.
+          The fallback <span className="mono">admin</span> account (password from
+          ADMIN_PASSWORD) always works, even with no profile created.
         </p>
       </section>
     </main>

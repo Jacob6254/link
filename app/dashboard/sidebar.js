@@ -3,15 +3,12 @@
 import { usePathname } from "next/navigation";
 
 const NAV = [
-  { href: "/dashboard/links", label: "Mes liens", icon: "🔗" },
-  { href: "/dashboard/groups", label: "Groupes", icon: "🗂️" },
-  { href: "/dashboard/stats", label: "Statistiques", icon: "📊" },
+  { href: "/dashboard/links", label: "My links", icon: "🔗" },
+  { href: "/dashboard/groups", label: "Groups", icon: "🗂️" },
+  { href: "/dashboard/stats", label: "Analytics", icon: "📊" },
 ];
 
-const ADMIN_NAV = [
-  { href: "/dashboard/profiles", label: "Profils", icon: "👥" },
-  { href: "/dashboard/settings", label: "Réglages", icon: "⚙️" },
-];
+const ADMIN_NAV = [{ href: "/dashboard/profiles", label: "Profiles", icon: "👥" }];
 
 export default function Sidebar({ role, username }) {
   const pathname = usePathname();
@@ -21,7 +18,7 @@ export default function Sidebar({ role, username }) {
     <aside className="sidebar">
       <a className="sidebar-brand" href="/dashboard">
         <span className="brand-dot" aria-hidden="true" />
-        <span className="brand-name">Mes liens</span>
+        <span className="brand-name">AllMySocials</span>
       </a>
 
       <nav className="sidebar-nav">
@@ -43,7 +40,7 @@ export default function Sidebar({ role, username }) {
             {(username[0] || "?").toUpperCase()}
           </span>
           <span className="nav-label user-name">{username}</span>
-          <a className="logout-icon" href="/api/logout" title="Se déconnecter">⏻</a>
+          <a className="logout-icon" href="/api/logout" title="Sign out">⏻</a>
         </div>
       </div>
     </aside>

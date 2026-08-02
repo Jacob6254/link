@@ -21,7 +21,7 @@ export async function POST(request) {
 
   if (!username || !password) {
     return NextResponse.json(
-      { error: "Identifiant et mot de passe requis" },
+      { error: "Username and password are required" },
       { status: 400 }
     );
   }
@@ -50,14 +50,14 @@ export async function POST(request) {
         console.warn("Table users absente — exécutez supabase-schema.sql");
       } else {
         console.error(err);
-        return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+        return NextResponse.json({ error: "Server error" }, { status: 500 });
       }
     }
   }
 
   if (!role) {
     return NextResponse.json(
-      { error: "Identifiant ou mot de passe incorrect" },
+      { error: "Incorrect username or password" },
       { status: 401 }
     );
   }

@@ -7,12 +7,12 @@ import { validateLink } from "@/lib/golink";
 export const dynamic = "force-dynamic";
 
 async function ownedLink(session, id) {
-  if (!/^\d+$/.test(id)) return { error: "Id invalide", status: 400 };
+  if (!/^\d+$/.test(id)) return { error: "Invalid id", status: 400 };
   const rows = await sb(`/links?id=eq.${id}&select=id,owner&limit=1`);
   const link = rows?.[0];
-  if (!link) return { error: "Lien introuvable", status: 404 };
+  if (!link) return { error: "Link not found", status: 404 };
   if (session.role !== "admin" && link.owner !== session.username) {
-    return { error: "Ce lien ne vous appartient pas", status: 403 };
+    return { error: "This link is not yours", status: 403 };
   }
   return { link };
 }
@@ -43,10 +43,10 @@ export async function PATCH(request, { params }) {
   } catch (err) {
     const msg = String(err.message || "");
     if (msg.includes("23505") || msg.includes("duplicate")) {
-      return Response.json({ error: "Ce slug est déjà pris" }, { status: 409 });
+      return Response.json({ error: "That slug is already taken" }, { status: 409 });
     }
     console.error(err);
-    return Response.json({ error: "Erreur serveur" }, { status: 500 });
+    return Response.json({ error: "Server error" }, { status: 500 });
   }
 }
 

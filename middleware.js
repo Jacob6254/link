@@ -17,7 +17,7 @@ export async function middleware(request) {
 
   if (!session) {
     if (pathname.startsWith("/api/")) {
-      return Response.json({ error: "Non autorisé" }, { status: 401 });
+      return Response.json({ error: "Not authorized" }, { status: 401 });
     }
     const url = new URL("/login", request.url);
     url.searchParams.set("next", pathname);
@@ -25,12 +25,10 @@ export async function middleware(request) {
   }
 
   const needsAdmin =
-    pathname.startsWith("/api/admin") ||
-    pathname.startsWith("/dashboard/profiles") ||
-    pathname.startsWith("/dashboard/settings");
+    pathname.startsWith("/api/admin") || pathname.startsWith("/dashboard/profiles");
   if (needsAdmin && session.role !== "admin") {
     if (pathname.startsWith("/api/")) {
-      return Response.json({ error: "Accès réservé aux admins" }, { status: 403 });
+      return Response.json({ error: "Admins only" }, { status: 403 });
     }
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }

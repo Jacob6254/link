@@ -52,12 +52,3 @@ alter table public.groups enable row level security;
 alter table public.links  add column if not exists group_id bigint references public.groups(id) on delete set null;
 alter table public.links  add column if not exists owner text;      -- username du profil qui a créé le lien
 alter table public.clicks add column if not exists country text;    -- code pays (header Vercel)
-
--- ===== settings : réglages du site (clé/valeur) =====
--- root_redirect : slug du lien vers lequel la racine du domaine redirige.
-create table if not exists public.settings (
-  key text primary key,
-  value text
-);
-alter table public.settings enable row level security;
--- Aucune policy : seule la service_role key (serveur) peut lire/écrire.

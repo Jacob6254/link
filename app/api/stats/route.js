@@ -65,7 +65,7 @@ export async function GET(request) {
     if (l[c.platform] !== undefined) l[c.platform]++;
 
     const gid = groupBySlug[c.slug];
-    const gname = (gid && groupName[gid]) || "Sans groupe";
+    const gname = (gid && groupName[gid]) || "Ungrouped";
     groupCount[gname] = (groupCount[gname] || 0) + 1;
   }
 

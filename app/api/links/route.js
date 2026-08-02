@@ -51,9 +51,9 @@ export async function POST(request) {
   } catch (err) {
     const msg = String(err.message || "");
     if (msg.includes("23505") || msg.includes("duplicate")) {
-      return Response.json({ error: "Ce slug est déjà pris" }, { status: 409 });
+      return Response.json({ error: "That slug is already taken" }, { status: 409 });
     }
     console.error(err);
-    return Response.json({ error: "Erreur serveur" }, { status: 500 });
+    return Response.json({ error: "Server error" }, { status: 500 });
   }
 }

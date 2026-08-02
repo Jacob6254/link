@@ -25,7 +25,7 @@ export default function LinksPage() {
     }
     if (!l.ok) {
       const data = await l.json().catch(() => ({}));
-      setError(data.error || "Erreur de chargement");
+      setError(data.error || "Failed to load");
       setLinks([]);
     } else {
       setLinks(await l.json());
@@ -43,7 +43,7 @@ export default function LinksPage() {
       body: JSON.stringify({ ...form, group_id: form.group_id || null }),
     });
     const data = await res.json();
-    if (!res.ok) return setError(data.error || "Erreur");
+    if (!res.ok) return setError(data.error || "Something went wrong");
     setForm(EMPTY);
     load();
   }
@@ -56,13 +56,13 @@ export default function LinksPage() {
       body: JSON.stringify({ ...editForm, group_id: editForm.group_id || null }),
     });
     const data = await res.json();
-    if (!res.ok) return setError(data.error || "Erreur");
+    if (!res.ok) return setError(data.error || "Something went wrong");
     setEditId(null);
     load();
   }
 
   async function removeLink(id, label) {
-    if (!confirm(`Supprimer « ${label} » ?`)) return;
+    if (!confirm(`Delete “${label}”?`)) return;
     await fetch(`/api/links/${id}`, { method: "DELETE" });
     load();
   }
@@ -81,7 +81,7 @@ export default function LinksPage() {
     setTimeout(() => setCopied(null), 1500);
   }
 
-  if (links === null) return <main className="panel"><p className="hint">Chargement…</p></main>;
+  if (links === null) return <main className="panel"><p className="hint">Loading…</p></main>;
 
   // Liens rangés par groupe, "sans groupe" en dernier.
   const sections = [
@@ -90,32 +90,32 @@ export default function LinksPage() {
       .filter((s) => s.items.length > 0),
     {
       key: "none",
-      name: "Sans groupe",
+      name: "Ungrouped",
       items: links.filter((l) => !l.group_id || !groups.some((g) => g.id === l.group_id)),
     },
   ].filter((s) => s.items.length > 0);
 
   return (
     <main className="panel">
-      <h1>Mes liens</h1>
+      <h1>My links</h1>
 
       <section className="card">
-        <h2>Ajouter un lien</h2>
+        <h2>Add a link</h2>
         <div className="form-row">
           <input
-            placeholder="slug (ex: insta)"
+            placeholder="slug (e.g. insta)"
             value={form.slug}
             onChange={(e) => setForm({ ...form, slug: e.target.value })}
           />
           <input
-            placeholder="Texte du bouton"
+            placeholder="Button label"
             value={form.label}
             onChange={(e) => setForm({ ...form, label: e.target.value })}
           />
         </div>
         <div className="form-row">
           <input
-            placeholder="URL (ex: https://www.instagram.com/pseudo/)"
+            placeholder="Destination URL (e.g. https://www.instagram.com/name/)"
             value={form.web_url}
             onChange={(e) => setForm({ ...form, web_url: e.target.value })}
           />
@@ -123,86 +123,86 @@ export default function LinksPage() {
             value={form.group_id}
             onChange={(e) => setForm({ ...form, group_id: e.target.value })}
           >
-            <option value="">Sans groupe</option>
+            <option value="">No group</option>
             {groups.map((g) => (
               <option key={g.id} value={g.id}>{g.name}</option>
             ))}
           </select>
         </div>
-        <button onClick={createLink}>Ajouter</button>
+        <button onClick={createLink}>Add link</button>
         {error && <p className="error">{error}</p>}
         <p className="hint">
-          Le lien court sera <span className="mono">{origin || ""}/slug</span> —
-          deep-links Android/iOS générés automatiquement (Instagram, TikTok,
-          YouTube, X, Snapchat…).
+          Your short link will be <span className="mono">{origin || ""}/slug</span> —
+          Android and iOS deep links are generated automatically (Instagram,
+          TikTok, YouTube, X, Snapchat and more).
         </p>
       </section>
 
       <section className="card">
-        <h2>Liens actifs <span className="count">{links.length}</span></h2>
-        {links.length === 0 && <p className="hint">Aucun lien pour l&apos;instant.</p>}
+        <h2>Active links <span className="count">{links.length}</span></h2>
+        {links.length === 0 && <p className="hint">No links yet.</p>}
         {sections.map((section) => (
-        <div className="link-section" key={section.key}>
-        <h3 className="section-title">
-          {section.name} <span className="section-count">{section.items.length}</span>
-        </h3>
-        <ul className="link-list">
-          {section.items.map((l) =>
-            editId === l.id ? (
-              <li key={l.id} className="editing">
-                <div className="form-row">
-                  <input
-                    value={editForm.slug}
-                    onChange={(e) => setEditForm({ ...editForm, slug: e.target.value })}
-                  />
-                  <input
-                    value={editForm.label}
-                    onChange={(e) => setEditForm({ ...editForm, label: e.target.value })}
-                  />
-                </div>
-                <div className="form-row">
-                  <input
-                    value={editForm.web_url}
-                    onChange={(e) => setEditForm({ ...editForm, web_url: e.target.value })}
-                  />
-                  <select
-                    value={editForm.group_id}
-                    onChange={(e) => setEditForm({ ...editForm, group_id: e.target.value })}
-                  >
-                    <option value="">Sans groupe</option>
-                    {groups.map((g) => (
-                      <option key={g.id} value={g.id}>{g.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="actions">
-                  <button onClick={() => saveEdit(l.id)}>Enregistrer</button>
-                  <button className="ghost" onClick={() => setEditId(null)}>Annuler</button>
-                </div>
-              </li>
-            ) : (
-              <li key={l.id}>
-                <div className="link-info">
-                  <strong>{l.label}</strong>
-                  <span className="mono">/{l.slug}</span>
-                  {l.owner && <span className="badge badge-dim">{l.owner}</span>}
-                  <br />
-                  <span className="hint">{l.web_url}</span>
-                </div>
-                <div className="actions">
-                  <button className="ghost" onClick={() => copyUrl(l.slug)}>
-                    {copied === l.slug ? "Copié ✓" : "Copier"}
-                  </button>
-                  <button className="ghost" onClick={() => startEdit(l)}>Modifier</button>
-                  <button className="danger" onClick={() => removeLink(l.id, l.label)}>
-                    Supprimer
-                  </button>
-                </div>
-              </li>
-            )
-          )}
-        </ul>
-        </div>
+          <div className="link-section" key={section.key}>
+            <h3 className="section-title">
+              {section.name} <span className="section-count">{section.items.length}</span>
+            </h3>
+            <ul className="link-list">
+              {section.items.map((l) =>
+                editId === l.id ? (
+                  <li key={l.id} className="editing">
+                    <div className="form-row">
+                      <input
+                        value={editForm.slug}
+                        onChange={(e) => setEditForm({ ...editForm, slug: e.target.value })}
+                      />
+                      <input
+                        value={editForm.label}
+                        onChange={(e) => setEditForm({ ...editForm, label: e.target.value })}
+                      />
+                    </div>
+                    <div className="form-row">
+                      <input
+                        value={editForm.web_url}
+                        onChange={(e) => setEditForm({ ...editForm, web_url: e.target.value })}
+                      />
+                      <select
+                        value={editForm.group_id}
+                        onChange={(e) => setEditForm({ ...editForm, group_id: e.target.value })}
+                      >
+                        <option value="">No group</option>
+                        {groups.map((g) => (
+                          <option key={g.id} value={g.id}>{g.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="actions">
+                      <button onClick={() => saveEdit(l.id)}>Save</button>
+                      <button className="ghost" onClick={() => setEditId(null)}>Cancel</button>
+                    </div>
+                  </li>
+                ) : (
+                  <li key={l.id}>
+                    <div className="link-info">
+                      <strong>{l.label}</strong>
+                      <span className="mono">/{l.slug}</span>
+                      {l.owner && <span className="badge badge-dim">{l.owner}</span>}
+                      <br />
+                      <span className="hint">{l.web_url}</span>
+                    </div>
+                    <div className="actions">
+                      <button className="ghost" onClick={() => copyUrl(l.slug)}>
+                        {copied === l.slug ? "Copied ✓" : "Copy"}
+                      </button>
+                      <button className="ghost" onClick={() => startEdit(l)}>Edit</button>
+                      <button className="danger" onClick={() => removeLink(l.id, l.label)}>
+                        Delete
+                      </button>
+                    </div>
+                  </li>
+                )
+              )}
+            </ul>
+          </div>
         ))}
       </section>
     </main>

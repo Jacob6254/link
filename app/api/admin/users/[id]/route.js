@@ -9,14 +9,14 @@ export async function DELETE(request, { params }) {
   if (!session) return unauthorized();
   const { id } = await params;
   if (!/^\d+$/.test(id)) {
-    return Response.json({ error: "Id invalide" }, { status: 400 });
+    return Response.json({ error: "Invalid id" }, { status: 400 });
   }
 
   const rows = await sb(`/users?id=eq.${id}&select=username&limit=1`);
-  if (!rows?.[0]) return Response.json({ error: "Profil introuvable" }, { status: 404 });
+  if (!rows?.[0]) return Response.json({ error: "Profile not found" }, { status: 404 });
   if (rows[0].username === session.username) {
     return Response.json(
-      { error: "Impossible de supprimer votre propre compte" },
+      { error: "You cannot delete your own account" },
       { status: 400 }
     );
   }
