@@ -130,7 +130,7 @@ export default function LinkManager() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(linkForm),
       },
-      "Short link created"
+      "Direct link created"
     );
     if (d) {
       setLinkForm(NEW_LINK);
@@ -199,7 +199,7 @@ export default function LinkManager() {
   }
 
   async function removeItem(item) {
-    const what = item.kind === "page" ? "page and all its buttons" : "short link";
+    const what = item.kind === "page" ? "page and all its buttons" : "direct link";
     if (!confirm(`Delete “${item.title}”? This removes the ${what}.`)) return;
     const url = item.kind === "page" ? `/api/pages/${item.id}` : `/api/links/${item.id}`;
     await api(url, { method: "DELETE" }, "Deleted");
@@ -246,7 +246,7 @@ export default function LinkManager() {
             + Group
           </button>
           <button className="ghost" onClick={() => setCreating("link")}>
-            + Short link
+            + Direct link
           </button>
           <button onClick={() => setCreating("page")}>+ Create page</button>
         </div>
@@ -292,7 +292,7 @@ export default function LinkManager() {
                 <ul className="rows">
                   {section.items.length === 0 && (
                     <li className="row-empty hint">
-                      Nothing here yet — create a page or a short link.
+                      Nothing here yet — create a page or a direct link.
                     </li>
                   )}
                   {section.items.map((it) => (
@@ -314,7 +314,7 @@ export default function LinkManager() {
                           <div className="row-title">
                             <strong>{it.title}</strong>
                             <span className={`chip chip-${it.kind}`}>
-                              {it.kind === "page" ? "Page" : "Link"}
+                              {it.kind === "page" ? "Page" : "Direct"}
                             </span>
                             {it.owner && data.groups && (
                               <span className="chip chip-dim">{it.owner}</span>
@@ -392,13 +392,13 @@ export default function LinkManager() {
           <span className="empty-icon" aria-hidden="true">🧩</span>
           <h2>Nothing here yet</h2>
           <p className="hint">
-            Create a landing page for your bio, or a short link that opens straight
+            Create a landing page for your bio, or a direct link that opens straight
             in the native app.
           </p>
           <div className="empty-actions">
             <button onClick={() => setCreating("page")}>+ Create page</button>
             <button className="ghost" onClick={() => setCreating("link")}>
-              + Short link
+              + Direct link
             </button>
           </div>
         </div>
@@ -441,7 +441,7 @@ export default function LinkManager() {
       )}
 
       {creating === "link" && (
-        <Modal title="Create a short link" onClose={() => setCreating(null)}>
+        <Modal title="Create a direct link" onClose={() => setCreating(null)}>
           <label className="field">
             <span>Label</span>
             <input
@@ -474,7 +474,7 @@ export default function LinkManager() {
           <div className="modal-foot">
             <button className="ghost" onClick={() => setCreating(null)}>Cancel</button>
             <button onClick={createLink} disabled={busy}>
-              {busy ? "Creating…" : "Create link"}
+              {busy ? "Creating…" : "Create direct link"}
             </button>
           </div>
         </Modal>
@@ -500,7 +500,7 @@ export default function LinkManager() {
       )}
 
       {editLink && (
-        <Modal title="Edit short link" onClose={() => setEditLink(null)}>
+        <Modal title="Edit direct link" onClose={() => setEditLink(null)}>
           <label className="field">
             <span>Label</span>
             <input

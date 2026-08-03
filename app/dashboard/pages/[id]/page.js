@@ -318,6 +318,57 @@ export default function PageEditor({ params }) {
                 )}
               </div>
             </div>
+            <div className="theme-controls">
+              <label className="field">
+                <span>Avatar size — {theme.avatarSize}px</span>
+                <input
+                  type="range" min="56" max="200" step="4"
+                  value={theme.avatarSize}
+                  onChange={(e) => patchTheme({ avatarSize: Number(e.target.value) })}
+                />
+              </label>
+              <label className="field">
+                <span>Avatar shape</span>
+                <select
+                  value={theme.avatarShape}
+                  onChange={(e) => patchTheme({ avatarShape: e.target.value })}
+                >
+                  <option value="circle">Circle</option>
+                  <option value="square">Rounded square</option>
+                </select>
+              </label>
+            </div>
+
+            <div className="field">
+              <span className="field-label">Cover photo (banner above the avatar)</span>
+              <div className="upload-row">
+                {theme.cover && (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img className="thumb thumb-wide" src={theme.cover} alt="" />
+                )}
+                <UploadButton
+                  label={theme.cover ? "Replace cover" : "Upload cover"}
+                  onUploaded={(url) => patchTheme({ cover: url })}
+                  onError={setError}
+                />
+                {theme.cover && (
+                  <button className="ghost" onClick={() => patchTheme({ cover: "" })}>
+                    Remove
+                  </button>
+                )}
+              </div>
+            </div>
+            {theme.cover && (
+              <label className="field">
+                <span>Cover height — {theme.coverHeight}px</span>
+                <input
+                  type="range" min="80" max="320" step="10"
+                  value={theme.coverHeight}
+                  onChange={(e) => patchTheme({ coverHeight: Number(e.target.value) })}
+                />
+              </label>
+            )}
+
             <label className="check">
               <input
                 type="checkbox"

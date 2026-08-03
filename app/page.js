@@ -5,7 +5,7 @@ import LoginForm from "./login-form";
 export const metadata = {
   title: "AllMySocials — links that open the app",
   description:
-    "Short links that open Instagram, TikTok and YouTube in the native app instead of the in-app browser.",
+    "Direct links that open Instagram, TikTok and YouTube in the native app instead of the in-app browser.",
 };
 
 const FEATURES = [
@@ -38,9 +38,9 @@ export default function Landing() {
 
       <main className="landing-main">
         <section className="landing-copy">
-          <span className="eyebrow">Link shortener for creators</span>
+          <span className="eyebrow">Link tools for creators</span>
           <h1>
-            Short links that open the app,<br />
+            Direct links that open the app,<br />
             <span className="grad">not the browser.</span>
           </h1>
           <p className="lead">

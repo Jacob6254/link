@@ -238,13 +238,14 @@ export default function StatsView({ slug = null }) {
             {slug ? (
               <>
                 <span className={`chip chip-${meta.kind}`}>
-                  {meta.kind === "page" ? "Page" : "Link"}
+                  {meta.kind === "page" ? "Page" : "Direct"}
                 </span>{" "}
                 <span className="mono">/{slug}</span> · {fmtDay(meta.from)} – {fmtDay(meta.to)}
               </>
             ) : (
               <>
-                {fmtDay(meta.from)} – {fmtDay(meta.to)} · {meta.days} days
+                {fmtDay(meta.from)} – {fmtDay(meta.to)} · {meta.days} day
+                {meta.days === 1 ? "" : "s"}
                 {meta.capped && " (window full)"}
               </>
             )}

@@ -138,20 +138,28 @@ export function Toast({ toast }) {
 }
 
 // ===== Sélecteur de période =====
-export const RANGE_PRESETS = [
-  { key: "7d", label: "7 days", days: 7 },
-  { key: "30d", label: "30 days", days: 30 },
-  { key: "90d", label: "90 days", days: 90 },
-  { key: "365d", label: "1 year", days: 365 },
-];
-
 export function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
-export function daysAgoISO(n) {
-  return new Date(Date.now() - (n - 1) * 86400000).toISOString().slice(0, 10);
+// Date d'il y a n jours (0 = aujourd'hui).
+export function dayISO(n) {
+  return new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);
 }
+
+// Début d'une fenêtre de n jours incluant aujourd'hui.
+export function daysAgoISO(n) {
+  return dayISO(n - 1);
+}
+
+export const RANGE_PRESETS = [
+  { key: "today", label: "Today", from: () => todayISO(), to: () => todayISO() },
+  { key: "yesterday", label: "Yesterday", from: () => dayISO(1), to: () => dayISO(1) },
+  { key: "7d", label: "7 days", from: () => daysAgoISO(7), to: () => todayISO() },
+  { key: "30d", label: "30 days", from: () => daysAgoISO(30), to: () => todayISO() },
+  { key: "90d", label: "90 days", from: () => daysAgoISO(90), to: () => todayISO() },
+  { key: "365d", label: "1 year", from: () => daysAgoISO(365), to: () => todayISO() },
+];
 
 export function RangePicker({ range, onChange }) {
   const [custom, setCustom] = useState(false);
@@ -165,7 +173,7 @@ export function RangePicker({ range, onChange }) {
             className={!custom && range.preset === p.key ? "range-btn active" : "range-btn"}
             onClick={() => {
               setCustom(false);
-              onChange({ preset: p.key, from: daysAgoISO(p.days), to: todayISO() });
+              onChange({ preset: p.key, from: p.from(), to: p.to() });
             }}
           >
             {p.label}
