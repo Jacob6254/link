@@ -43,11 +43,25 @@ export async function GET(request) {
   let clicks = [];
   try {
     clicks = await sb(
-      `/clicks?select=slug,created_at&created_at=gte.${since}&order=created_at.desc&limit=10000`
+      `/clicks?select=slug,event,created_at&created_at=gte.${since}&order=created_at.desc&limit=10000`
     );
   } catch (err) {
-    console.error(err); // le manager doit s'afficher même sans stats
+    if (!isMissingSchema(err)) {
+      console.error(err); // le manager doit s'afficher même sans stats
+    } else {
+      try {
+        clicks = await sb(
+          `/clicks?select=slug,created_at&created_at=gte.${since}&order=created_at.desc&limit=10000`
+        );
+      } catch (err2) {
+        console.error(err2);
+      }
+    }
   }
+
+  // Slugs encore existants : les clics orphelins d'un lien supprimé ne doivent
+  // jamais réapparaître si le slug est recréé.
+  const liveSlugs = new Set([...links.map((l) => l.slug), ...pages.map((p) => p.slug)]);
 
   const stats = {}; // slug -> { today, week, byDay[] }
   const dayIndex = {};
@@ -58,6 +72,7 @@ export async function GET(request) {
     dayIndex[d] = i;
   }
   for (const c of clicks) {
+    if (!liveSlugs.has(c.slug) || c.event === "view") continue;
     const s = (stats[c.slug] ??= {
       today: 0,
       week: 0,

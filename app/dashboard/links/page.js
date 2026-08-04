@@ -221,7 +221,7 @@ export default function LinkManager() {
     <main className="panel wide">
       <header className="mgr-head">
         <div>
-          <h1>Link Manager</h1>
+          <h1><span className="card-emoji" aria-hidden="true">🔗</span>Link Manager</h1>
           <p className="hint">
             {data ? (
               <>
@@ -243,17 +243,18 @@ export default function LinkManager() {
             />
           </div>
           <button className="ghost" onClick={() => setCreating("group")}>
-            + Group
+            🗂️ Group
           </button>
           <button className="ghost" onClick={() => setCreating("link")}>
-            + Direct link
+            ⚡ Direct link
           </button>
-          <button onClick={() => setCreating("page")}>+ Create page</button>
+          <button onClick={() => setCreating("page")}>✨ Create page</button>
         </div>
       </header>
 
       {error && <p className="error">{error}</p>}
       {!data && <Loader label="Loading your links" />}
+      {data && <div className="route-bar" />}
 
       {data &&
         sections.map((section, si) => {
@@ -389,7 +390,7 @@ export default function LinkManager() {
 
       {data && total === 0 && !query && (
         <div className="card empty-state">
-          <span className="empty-icon" aria-hidden="true">🧩</span>
+          <span className="empty-icon" aria-hidden="true">🚀</span>
           <h2>Nothing here yet</h2>
           <p className="hint">
             Create a landing page for your bio, or a direct link that opens straight

@@ -2,6 +2,7 @@
 "use client";
 // Gestion des profils (admins uniquement — le middleware bloque les autres).
 import { useCallback, useEffect, useState } from "react";
+import { Loader } from "../ui";
 
 export default function ProfilesPage() {
   const [users, setUsers] = useState(null);
@@ -49,14 +50,14 @@ export default function ProfilesPage() {
     load();
   }
 
-  if (users === null) return <main className="panel"><p className="hint">Loading…</p></main>;
+  if (users === null) return <main className="panel"><Loader label="Loading profiles" /></main>;
 
   return (
     <main className="panel">
-      <h1>Profiles</h1>
+      <h1><span className="card-emoji" aria-hidden="true">👥</span>Profiles</h1>
 
       <section className="card">
-        <h2>Create a profile</h2>
+        <h2><span className="card-emoji" aria-hidden="true">➕</span>Create a profile</h2>
         <div className="form-row">
           <input
             placeholder="Username (e.g. paul)"

@@ -98,3 +98,10 @@ create table if not exists public.templates (
 );
 alter table public.templates enable row level security;
 -- Aucune policy : seule la service_role key (serveur) peut lire/écrire.
+
+-- ===== v7 : vues de page, visites, appareil =====
+alter table public.clicks add column if not exists event text not null default 'click'; -- view | click
+alter table public.clicks add column if not exists visit_id text;   -- relie une vue à ses clics
+alter table public.clicks add column if not exists device text;     -- mobile | tablet | desktop
+
+create index if not exists clicks_event_idx on public.clicks (event, created_at desc);

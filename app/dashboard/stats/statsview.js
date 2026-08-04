@@ -5,13 +5,21 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader, RangePicker, daysAgoISO, todayISO } from "../ui";
 
-const SERIES = ["#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#9085e9"];
-const PLATFORM_COLOR = { android: "#3987e5", ios: "#d95926", desktop: "#199e70" };
+const SERIES = ["#9085e9", "#d95926", "#199e70", "#c98500", "#3987e5", "#d55181"];
+const PLATFORM_COLOR = { android: "#9085e9", ios: "#d95926", desktop: "#199e70" };
+const DEVICE_COLOR = { mobile: "#9085e9", desktop: "#199e70", tablet: "#c98500" };
+const DEVICE_EMOJI = { mobile: "📱", desktop: "💻", tablet: "📟" };
 const PLATFORM_LABEL = { android: "Android", ios: "iOS", desktop: "Desktop" };
 
-function flagEmoji(code) {
-  if (!/^[A-Z]{2}$/.test(code)) return "🌐";
-  return String.fromCodePoint(...[...code].map((c) => 0x1f1e6 + c.charCodeAt(0) - 65));
+// Windows n'a aucun glyphe pour les emojis drapeaux : on affiche le code pays
+// dans une pastille, lisible sur toutes les plateformes.
+function Flag({ code }) {
+  const known = /^[A-Z]{2}$/.test(code);
+  return (
+    <span className={known ? "flag" : "flag flag-unknown"} aria-hidden="true">
+      {known ? code : "??"}
+    </span>
+  );
 }
 
 function countryName(code) {
@@ -59,8 +67,8 @@ function AreaChart({ byDay }) {
       >
         <defs>
           <linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#3987e5" stopOpacity="0.42" />
-            <stop offset="100%" stopColor="#3987e5" stopOpacity="0.02" />
+            <stop offset="0%" stopColor="#9085e9" stopOpacity="0.42" />
+            <stop offset="100%" stopColor="#9085e9" stopOpacity="0.02" />
           </linearGradient>
         </defs>
 
@@ -73,18 +81,18 @@ function AreaChart({ byDay }) {
 
         <polygon points={area} fill="url(#areaFill)" />
         <polyline
-          points={line} fill="none" stroke="#3987e5"
-          strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"
+          points={line} fill="none" stroke="#9085e9"
+          strokeWidth="2.2" strokeLinejoin="round" strokeLinecap="round"
         />
 
         {hover !== null && (
           <>
             <line
               x1={x(hover)} x2={x(hover)} y1={PAD_T} y2={PAD_T + innerH}
-              stroke="#3987e5" strokeWidth="1" strokeDasharray="3 3" opacity="0.7"
+              stroke="#9085e9" strokeWidth="1" strokeDasharray="3 3" opacity="0.7"
             />
             <circle cx={x(hover)} cy={y(byDay[hover].total)} r="4.5"
-              fill="#3987e5" stroke="#101827" strokeWidth="2" />
+              fill="#9085e9" stroke="#141124" strokeWidth="2" />
           </>
         )}
 
@@ -124,7 +132,7 @@ function Donut({ data, total }) {
   let offset = 0;
   return (
     <svg className="donut" viewBox="0 0 110 110" role="img" aria-label="Breakdown">
-      <circle cx="55" cy="55" r={R} fill="none" stroke="#1e2b45" strokeWidth="15" />
+      <circle cx="55" cy="55" r={R} fill="none" stroke="#241f45" strokeWidth="15" />
       {data.map((d, i) => {
         const frac = total ? d.total / total : 0;
         const dash = `${(frac * C).toFixed(2)} ${C.toFixed(2)}`;
@@ -154,7 +162,7 @@ function HBar({ value, max, color }) {
   );
 }
 
-function BarList({ rows, keyName = "name", color = "#3987e5", icon, limit = 8 }) {
+function BarList({ rows, keyName = "name", color = "#9085e9", icon, limit = 8 }) {
   const max = Math.max(1, ...rows.map((r) => r.total));
   const total = rows.reduce((n, r) => n + r.total, 0);
   if (rows.length === 0) return <p className="hint">No data for this period.</p>;
@@ -172,6 +180,53 @@ function BarList({ rows, keyName = "name", color = "#3987e5", icon, limit = 8 })
           </span>
         </div>
       ))}
+    </>
+  );
+}
+
+// ===== Répartition par appareil =====
+function DeviceBreakdown({ rows, total }) {
+  const top = [...rows].sort((a, b) => b.total - a.total)[0];
+  const pct = (n) => (total ? (n / total) * 100 : 0);
+  return (
+    <>
+      <div className="device-head">
+        <span className="device-pct">
+          {total ? pct(top.total).toFixed(1) : "0.0"}%
+        </span>
+        <span className="device-lead">
+          {top?.name || "—"} · {total} visit{total === 1 ? "" : "s"}
+        </span>
+      </div>
+      <div className="device-bar">
+        {rows.map((d, i) =>
+          d.total > 0 ? (
+            <span
+              key={d.key}
+              className="device-seg"
+              title={`${d.name} — ${d.total}`}
+              style={{
+                flex: `${d.total} 1 0`,
+                background: DEVICE_COLOR[d.key],
+                animationDelay: `${i * 90}ms`,
+              }}
+            />
+          ) : null
+        )}
+        {total === 0 && <span className="device-seg" style={{ flex: 1, background: "var(--border)" }} />}
+      </div>
+      <div className="device-list">
+        {rows.map((d) => (
+          <div className="device-row" key={d.key}>
+            <span className="device-name">
+              <span className="dot" style={{ background: DEVICE_COLOR[d.key] }} />
+              <span aria-hidden="true">{DEVICE_EMOJI[d.key]}</span> {d.name}
+            </span>
+            <span className="device-count">{d.total}</span>
+            <span className="device-share">{pct(d.total).toFixed(1)}%</span>
+          </div>
+        ))}
+      </div>
     </>
   );
 }
@@ -218,13 +273,18 @@ export default function StatsView({ slug = null }) {
   if (error) return <main className="panel wide"><p className="error">{error}</p></main>;
   if (!stats) return <main className="panel wide"><Loader label="Loading analytics" /></main>;
 
-  const { meta, total, byDay, byLink, byCountry, byGroup, byOS, bySource, byButton } = stats;
+  const {
+    meta, total, views = 0, visitsWithClicks = 0, ctr = 0,
+    byDay, byLink, byCountry, byGroup, byOS, bySource, byButton,
+    byDevice = [],
+  } = stats;
   const best = byLink[0];
   const bestCountry = byCountry[0];
   const bestSource = bySource[0];
   const busiest = [...byDay].sort((a, b) => b.total - a.total)[0];
   const avg = byDay.length ? Math.round((total / byDay.length) * 10) / 10 : 0;
   const showGroups = !slug && (byGroup.length > 1 || byGroup[0]?.name !== "Ungrouped");
+  const deviceTotal = byDevice.reduce((n, d) => n + d.total, 0);
 
   return (
     <main className={loading ? "panel wide is-loading" : "panel wide"}>
@@ -254,47 +314,108 @@ export default function StatsView({ slug = null }) {
         <RangePicker range={range} onChange={setRange} />
       </header>
 
-      <div className="tiles">
+      <div className="tiles stagger">
         <div className="tile">
-          <span className="tile-label">Clicks</span>
+          <div className="tile-head">
+            <span className="tile-label">Page views</span>
+            <span className="tile-icon" aria-hidden="true">👁️</span>
+          </div>
+          <span className="tile-value">{views}</span>
+          <span className="tile-sub">landing page loads</span>
+        </div>
+        <div className="tile">
+          <div className="tile-head">
+            <span className="tile-label">Clicks</span>
+            <span className="tile-icon" aria-hidden="true">👆</span>
+          </div>
           <span className="tile-value">{total}</span>
           <span className="tile-sub">{avg}/day average</span>
         </div>
         <div className="tile">
-          <span className="tile-label">Busiest day</span>
+          <div className="tile-head">
+            <span className="tile-label">Visits with clicks</span>
+            <span className="tile-icon" aria-hidden="true">⚡</span>
+          </div>
+          <span className="tile-value">{visitsWithClicks}</span>
+          <span className="tile-sub">
+            {views > 0 ? `out of ${views} visits` : "no visits yet"}
+          </span>
+        </div>
+        <div className="tile">
+          <div className="tile-head">
+            <span className="tile-label">Click-through rate</span>
+            <span className="tile-icon" aria-hidden="true">📊</span>
+          </div>
+          <span className="tile-value">{ctr}%</span>
+          <span className="tile-sub">
+            {views > 0 ? "visits that clicked" : "needs page views"}
+          </span>
+        </div>
+      </div>
+
+      <div className="tiles stagger">
+        <div className="tile">
+          <div className="tile-head">
+            <span className="tile-label">Busiest day</span>
+            <span className="tile-icon" aria-hidden="true">🔥</span>
+          </div>
           <span className="tile-value tile-small">
             {busiest && busiest.total > 0 ? fmtDay(busiest.day) : "—"}
           </span>
-          {busiest && busiest.total > 0 && (
-            <span className="tile-sub">{busiest.total} clicks</span>
-          )}
-        </div>
-        <div className="tile">
-          <span className="tile-label">Top country</span>
-          <span className="tile-value tile-small">
-            {bestCountry
-              ? `${flagEmoji(bestCountry.code)} ${countryName(bestCountry.code)}`
-              : "—"}
+          <span className="tile-sub">
+            {busiest && busiest.total > 0 ? `${busiest.total} clicks` : "no clicks yet"}
           </span>
-          {bestCountry && <span className="tile-sub">{bestCountry.total} clicks</span>}
         </div>
         <div className="tile">
-          <span className="tile-label">{slug ? "Top source" : "Top link"}</span>
+          <div className="tile-head">
+            <span className="tile-label">Top country</span>
+            <span className="tile-icon" aria-hidden="true">🌍</span>
+          </div>
+          <span className="tile-value tile-small">
+            {bestCountry ? (
+              <>
+                <Flag code={bestCountry.code} /> {countryName(bestCountry.code)}
+              </>
+            ) : (
+              "—"
+            )}
+          </span>
+          <span className="tile-sub">
+            {bestCountry ? `${bestCountry.total} events` : "no data"}
+          </span>
+        </div>
+        <div className="tile">
+          <div className="tile-head">
+            <span className="tile-label">Top source</span>
+            <span className="tile-icon" aria-hidden="true">🚀</span>
+          </div>
+          <span className="tile-value tile-small">{bestSource?.name || "—"}</span>
+          <span className="tile-sub">
+            {bestSource ? `${bestSource.total} events` : "no data"}
+          </span>
+        </div>
+        <div className="tile">
+          <div className="tile-head">
+            <span className="tile-label">{slug ? "Top button" : "Top link"}</span>
+            <span className="tile-icon" aria-hidden="true">🏆</span>
+          </div>
           <span className="tile-value tile-small">
             {slug
-              ? bestSource?.name || "—"
+              ? byButton[0]?.label || "—"
               : best
                 ? `/${best.slug}`
                 : "—"}
           </span>
-          {(slug ? bestSource : best) && (
-            <span className="tile-sub">{(slug ? bestSource : best).total} clicks</span>
-          )}
+          <span className="tile-sub">
+            {(slug ? byButton[0] : best)
+              ? `${(slug ? byButton[0] : best).total} clicks`
+              : "no clicks yet"}
+          </span>
         </div>
       </div>
 
       <section className="card">
-        <h2>Clicks over time</h2>
+        <h2><span className="card-emoji" aria-hidden="true">📈</span>Clicks over time</h2>
         {total === 0 ? (
           <p className="hint">No clicks in this period.</p>
         ) : (
@@ -304,7 +425,12 @@ export default function StatsView({ slug = null }) {
 
       <div className="two-col">
         <section className="card">
-          <h2>Operating system</h2>
+          <h2><span className="card-emoji" aria-hidden="true">📱</span>Devices</h2>
+          <DeviceBreakdown rows={byDevice} total={deviceTotal} />
+        </section>
+
+        <section className="card">
+          <h2><span className="card-emoji" aria-hidden="true">🖥️</span>Operating system</h2>
           <div className="donut-row">
             <Donut data={byOS} total={total} />
             <div className="donut-legend">
@@ -320,32 +446,36 @@ export default function StatsView({ slug = null }) {
           </div>
         </section>
 
-        <section className="card">
-          <h2>Traffic sources</h2>
-          <BarList rows={bySource} color="#9085e9" />
-        </section>
       </div>
 
       <div className="two-col">
         <section className="card">
-          <h2>Countries</h2>
+          <h2><span className="card-emoji" aria-hidden="true">🔗</span>Traffic sources</h2>
+          <BarList rows={bySource} color="#d55181" />
+        </section>
+
+        <section className="card">
+          <h2><span className="card-emoji" aria-hidden="true">🌍</span>Countries</h2>
           <BarList
             rows={byCountry}
             keyName="code"
-            color="#3987e5"
+            color="#9085e9"
             icon={(r) => (
               <>
-                <span aria-hidden="true">{flagEmoji(r.code)}</span> {countryName(r.code)}
+                <Flag code={r.code} /> {countryName(r.code)}
               </>
             )}
           />
         </section>
 
+      </div>
+
+      <div className="two-col">
         <section className="card">
-          <h2>Platforms</h2>
+          <h2><span className="card-emoji" aria-hidden="true">📲</span>Platforms</h2>
           <BarList
             rows={platRows}
-            color={(r) => PLATFORM_COLOR[r.key] || "#3987e5"}
+            color={(r) => PLATFORM_COLOR[r.key] || "#9085e9"}
             icon={(r) => (
               <>
                 <span className="dot" style={{ background: PLATFORM_COLOR[r.key] }} />
@@ -354,11 +484,18 @@ export default function StatsView({ slug = null }) {
             )}
           />
         </section>
+
+        {showGroups && (
+          <section className="card">
+            <h2><span className="card-emoji" aria-hidden="true">🗂️</span>By group</h2>
+            <BarList rows={byGroup} color="#c98500" />
+          </section>
+        )}
       </div>
 
       {slug && meta.kind === "page" && (
         <section className="card">
-          <h2>Buttons</h2>
+          <h2><span className="card-emoji" aria-hidden="true">🎯</span>Buttons</h2>
           {byButton.length === 0 ? (
             <p className="hint">
               No button clicks recorded in this period.
@@ -369,16 +506,9 @@ export default function StatsView({ slug = null }) {
         </section>
       )}
 
-      {showGroups && (
-        <section className="card">
-          <h2>By group</h2>
-          <BarList rows={byGroup} color="#c98500" />
-        </section>
-      )}
-
       {!slug && (
         <section className="card">
-          <h2>By link</h2>
+          <h2><span className="card-emoji" aria-hidden="true">📋</span>By link</h2>
           {byLink.length === 0 ? (
             <p className="hint">No clicks in this period.</p>
           ) : (
@@ -405,7 +535,7 @@ export default function StatsView({ slug = null }) {
                       <HBar
                         value={l.total}
                         max={Math.max(1, ...byLink.map((x) => x.total))}
-                        color="#3987e5"
+                        color="#9085e9"
                       />
                     </td>
                     <td><strong>{l.total}</strong></td>

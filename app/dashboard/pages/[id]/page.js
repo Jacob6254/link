@@ -266,7 +266,7 @@ export default function PageEditor({ params }) {
       <div className="editor-cols">
         <div className="editor-controls">
           <section className="card">
-            <h2>Page</h2>
+            <h2><span className="card-emoji" aria-hidden="true">📄</span>Page</h2>
             <label className="field">
               <span>Title</span>
               <input
@@ -381,7 +381,7 @@ export default function PageEditor({ params }) {
 
           <section className="card">
             <div className="card-head">
-              <h2>Templates <span className="count">{templates.length}</span></h2>
+              <h2><span className="card-emoji" aria-hidden="true">🧱</span>Templates <span className="count">{templates.length}</span></h2>
               <button className="ghost" onClick={() => setSavingTpl(true)}>
                 Save current design
               </button>
@@ -424,7 +424,7 @@ export default function PageEditor({ params }) {
           </section>
 
           <section className="card">
-            <h2>Theme</h2>
+            <h2><span className="card-emoji" aria-hidden="true">🎨</span>Theme</h2>
             <div className="preset-grid">
               {Object.entries(PRESETS).map(([key, p]) => (
                 <button
@@ -564,7 +564,7 @@ export default function PageEditor({ params }) {
           </section>
 
           <section className="card">
-            <h2>Buttons <span className="count">{buttons.length}</span></h2>
+            <h2><span className="card-emoji" aria-hidden="true">🔲</span>Buttons <span className="count">{buttons.length}</span></h2>
             <div className="form-row">
               <input
                 placeholder="Button label (e.g. My Instagram)"

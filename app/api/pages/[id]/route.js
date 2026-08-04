@@ -90,6 +90,14 @@ export async function DELETE(request, { params }) {
   const check = await ownedPage(session, id);
   if (check.error) return Response.json({ error: check.error }, { status: check.status });
 
+  // Les statistiques sont indexées par slug : sans ce nettoyage, recréer une
+  // page avec le même slug hériterait des vues et clics de l'ancienne.
+  const slug = check.page.slug;
   await sb(`/pages?id=eq.${id}`, { method: "DELETE" });
+  try {
+    await sb(`/clicks?slug=eq.${encodeURIComponent(slug)}`, { method: "DELETE" });
+  } catch (err) {
+    console.error("Nettoyage des stats échoué :", err);
+  }
   return Response.json({ ok: true });
 }

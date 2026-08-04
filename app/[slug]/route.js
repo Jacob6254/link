@@ -2,7 +2,7 @@
 // Racine des slugs : lien court direct OU page bio (type Linktree).
 // Les pages statiques (/login, /dashboard, ...) ont priorité sur cette route.
 import { sb, isMissingSchema } from "@/lib/db";
-import { handleGoLink } from "@/lib/golink";
+import { handleGoLink, logEvent } from "@/lib/golink";
 import { renderPageHTML } from "@/lib/pagerender";
 
 export const dynamic = "force-dynamic";
@@ -33,7 +33,12 @@ export async function GET(request, { params }) {
           `/page_buttons?page_id=eq.${page.id}&select=id,label&order=sort_order.asc,id.asc`
         );
       }
-      return new Response(renderPageHTML(page, buttons), {
+      // Une visite = un identifiant, repassé aux boutons via ?v= : c'est ce
+      // qui permet de calculer le taux de clic (combien de visites cliquent).
+      const visitId = crypto.randomUUID().slice(0, 18);
+      await logEvent(request, { slug, event: "view", visitId });
+
+      return new Response(renderPageHTML(page, buttons, { visitId }), {
         headers: {
           "Content-Type": "text/html; charset=utf-8",
           "Cache-Control": "no-store",

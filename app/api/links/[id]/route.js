@@ -61,6 +61,17 @@ export async function DELETE(request, { params }) {
   const check = await ownedLink(session, id);
   if (check.error) return Response.json({ error: check.error }, { status: check.status });
 
+  // Les statistiques sont indexées par slug : sans ce nettoyage, recréer un
+  // lien avec le même slug hériterait des clics de l'ancien.
+  const rows = await sb(`/links?id=eq.${id}&select=slug&limit=1`);
+  const slug = rows?.[0]?.slug;
   await sb(`/links?id=eq.${id}`, { method: "DELETE" });
+  if (slug) {
+    try {
+      await sb(`/clicks?slug=eq.${encodeURIComponent(slug)}`, { method: "DELETE" });
+    } catch (err) {
+      console.error("Nettoyage des stats échoué :", err);
+    }
+  }
   return Response.json({ ok: true });
 }
