@@ -6,7 +6,8 @@
 // L'aperçu utilise le MÊME moteur de rendu que la page publique (iframe).
 import { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ANIMATIONS, FONTS, HEADER_STYLES, PRESETS, renderPageHTML, resolveTheme,
+  ANIMATIONS, BRAND_ICONS, FONTS, HEADER_STYLES, PRESETS,
+  renderPageHTML, resolveTheme,
 } from "@/lib/pagerender";
 import { Loader, Modal, Toast } from "../../ui";
 import {
@@ -699,21 +700,34 @@ export default function PageEditor({ params }) {
                           ))}
                         </select>
                       </label>
-                      <label className="field">
-                        <span>Icon <span className="opt">emoji or upload</span></span>
+                      <div className="field">
+                        <span className="field-label">
+                          Icon <span className="opt">pick a logo, upload, or type an emoji</span>
+                        </span>
+                        <div className="brand-row">
+                          {Object.entries(BRAND_ICONS).map(([key, b]) => (
+                            <button
+                              key={key}
+                              type="button"
+                              title={b.name}
+                              className={
+                                editBtn.icon === `brand:${key}` ? "brand-pick active" : "brand-pick"
+                              }
+                              style={{ background: b.bg }}
+                              onClick={() => setEditBtn({ ...editBtn, icon: `brand:${key}` })}
+                              dangerouslySetInnerHTML={{ __html: b.svg }}
+                            />
+                          ))}
+                        </div>
                         <div className="upload-row">
-                          {editBtn.icon && (
-                            /^https?:\/\//i.test(editBtn.icon) ? (
-                              /* eslint-disable-next-line @next/next/no-img-element */
-                              <img className="thumb" src={editBtn.icon} alt="" />
-                            ) : (
-                              <span className="thumb thumb-text">{editBtn.icon}</span>
-                            )
-                          )}
                           <input
                             className="grow"
-                            placeholder="📸"
-                            value={/^https?:\/\//i.test(editBtn.icon || "") ? "" : editBtn.icon || ""}
+                            placeholder="Emoji, e.g. ⭐"
+                            value={
+                              /^(https?:\/\/|brand:)/i.test(editBtn.icon || "")
+                                ? ""
+                                : editBtn.icon || ""
+                            }
                             onChange={(e) => setEditBtn({ ...editBtn, icon: e.target.value })}
                           />
                           <UploadButton
@@ -728,7 +742,7 @@ export default function PageEditor({ params }) {
                             </button>
                           )}
                         </div>
-                      </label>
+                      </div>
 
                       <div className="field">
                         <span className="field-label">Background photo</span>
