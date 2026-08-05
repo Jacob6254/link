@@ -4,11 +4,16 @@
 // Palette catégorielle validée CVD-safe.
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader, RangePicker, daysAgoISO, todayISO } from "../ui";
+import {
+  IconBack, IconEye, IconFlame, IconGlobe, IconGrid, IconList, IconMonitor,
+  IconPercent, IconPhone, IconPointer, IconSend, IconSpark, IconTablet,
+  IconTarget, IconTrend, IconTrophy,
+} from "../icons";
 
-const SERIES = ["#9085e9", "#d95926", "#199e70", "#c98500", "#3987e5", "#d55181"];
-const PLATFORM_COLOR = { android: "#9085e9", ios: "#d95926", desktop: "#199e70" };
-const DEVICE_COLOR = { mobile: "#9085e9", desktop: "#199e70", tablet: "#c98500" };
-const DEVICE_EMOJI = { mobile: "📱", desktop: "💻", tablet: "📟" };
+const SERIES = ["#7c6cf6", "#e0713a", "#22a06b", "#c98500", "#3b93e8", "#d55181"];
+const PLATFORM_COLOR = { android: "#7c6cf6", ios: "#e0713a", desktop: "#22a06b" };
+const DEVICE_COLOR = { mobile: "#7c6cf6", desktop: "#22a06b", tablet: "#c98500" };
+const DEVICE_ICON = { mobile: IconPhone, desktop: IconMonitor, tablet: IconTablet };
 const PLATFORM_LABEL = { android: "Android", ios: "iOS", desktop: "Desktop" };
 
 // Windows n'a aucun glyphe pour les emojis drapeaux : on affiche le code pays
@@ -67,8 +72,8 @@ function AreaChart({ byDay }) {
       >
         <defs>
           <linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#9085e9" stopOpacity="0.42" />
-            <stop offset="100%" stopColor="#9085e9" stopOpacity="0.02" />
+            <stop offset="0%" stopColor="#7c6cf6" stopOpacity="0.42" />
+            <stop offset="100%" stopColor="#7c6cf6" stopOpacity="0.02" />
           </linearGradient>
         </defs>
 
@@ -81,7 +86,7 @@ function AreaChart({ byDay }) {
 
         <polygon points={area} fill="url(#areaFill)" />
         <polyline
-          points={line} fill="none" stroke="#9085e9"
+          points={line} fill="none" stroke="#7c6cf6"
           strokeWidth="2.2" strokeLinejoin="round" strokeLinecap="round"
         />
 
@@ -89,10 +94,10 @@ function AreaChart({ byDay }) {
           <>
             <line
               x1={x(hover)} x2={x(hover)} y1={PAD_T} y2={PAD_T + innerH}
-              stroke="#9085e9" strokeWidth="1" strokeDasharray="3 3" opacity="0.7"
+              stroke="#7c6cf6" strokeWidth="1" strokeDasharray="3 3" opacity="0.7"
             />
             <circle cx={x(hover)} cy={y(byDay[hover].total)} r="4.5"
-              fill="#9085e9" stroke="#141124" strokeWidth="2" />
+              fill="#7c6cf6" stroke="#121215" strokeWidth="2" />
           </>
         )}
 
@@ -132,7 +137,7 @@ function Donut({ data, total }) {
   let offset = 0;
   return (
     <svg className="donut" viewBox="0 0 110 110" role="img" aria-label="Breakdown">
-      <circle cx="55" cy="55" r={R} fill="none" stroke="#241f45" strokeWidth="15" />
+      <circle cx="55" cy="55" r={R} fill="none" stroke="#26262c" strokeWidth="15" />
       {data.map((d, i) => {
         const frac = total ? d.total / total : 0;
         const dash = `${(frac * C).toFixed(2)} ${C.toFixed(2)}`;
@@ -162,7 +167,7 @@ function HBar({ value, max, color }) {
   );
 }
 
-function BarList({ rows, keyName = "name", color = "#9085e9", icon, limit = 8 }) {
+function BarList({ rows, keyName = "name", color = "#7c6cf6", icon, limit = 8 }) {
   const max = Math.max(1, ...rows.map((r) => r.total));
   const total = rows.reduce((n, r) => n + r.total, 0);
   if (rows.length === 0) return <p className="hint">No data for this period.</p>;
@@ -220,7 +225,8 @@ function DeviceBreakdown({ rows, total }) {
           <div className="device-row" key={d.key}>
             <span className="device-name">
               <span className="dot" style={{ background: DEVICE_COLOR[d.key] }} />
-              <span aria-hidden="true">{DEVICE_EMOJI[d.key]}</span> {d.name}
+              {DEVICE_ICON[d.key] ? (() => { const I = DEVICE_ICON[d.key]; return <I className="ico" size={15} />; })() : null}
+              {d.name}
             </span>
             <span className="device-count">{d.total}</span>
             <span className="device-share">{pct(d.total).toFixed(1)}%</span>
@@ -291,7 +297,7 @@ export default function StatsView({ slug = null }) {
       <header className="mgr-head">
         <div>
           <h1>
-            {slug && <a className="back" href="/dashboard/stats">←</a>}{" "}
+            {slug && <a className="back" href="/dashboard/stats"><IconBack size={17} /></a>}{" "}
             {slug ? meta.title || slug : "Analytics"}
           </h1>
           <p className="hint">
@@ -318,7 +324,7 @@ export default function StatsView({ slug = null }) {
         <div className="tile">
           <div className="tile-head">
             <span className="tile-label">Page views</span>
-            <span className="tile-icon" aria-hidden="true">👁️</span>
+            <span className="tile-icon"><IconEye size={15} /></span>
           </div>
           <span className="tile-value">{views}</span>
           <span className="tile-sub">landing page loads</span>
@@ -326,7 +332,7 @@ export default function StatsView({ slug = null }) {
         <div className="tile">
           <div className="tile-head">
             <span className="tile-label">Clicks</span>
-            <span className="tile-icon" aria-hidden="true">👆</span>
+            <span className="tile-icon"><IconPointer size={15} /></span>
           </div>
           <span className="tile-value">{total}</span>
           <span className="tile-sub">{avg}/day average</span>
@@ -334,7 +340,7 @@ export default function StatsView({ slug = null }) {
         <div className="tile">
           <div className="tile-head">
             <span className="tile-label">Visits with clicks</span>
-            <span className="tile-icon" aria-hidden="true">⚡</span>
+            <span className="tile-icon"><IconSpark size={15} /></span>
           </div>
           <span className="tile-value">{visitsWithClicks}</span>
           <span className="tile-sub">
@@ -344,7 +350,7 @@ export default function StatsView({ slug = null }) {
         <div className="tile">
           <div className="tile-head">
             <span className="tile-label">Click-through rate</span>
-            <span className="tile-icon" aria-hidden="true">📊</span>
+            <span className="tile-icon"><IconPercent size={15} /></span>
           </div>
           <span className="tile-value">{ctr}%</span>
           <span className="tile-sub">
@@ -357,7 +363,7 @@ export default function StatsView({ slug = null }) {
         <div className="tile">
           <div className="tile-head">
             <span className="tile-label">Busiest day</span>
-            <span className="tile-icon" aria-hidden="true">🔥</span>
+            <span className="tile-icon"><IconFlame size={15} /></span>
           </div>
           <span className="tile-value tile-small">
             {busiest && busiest.total > 0 ? fmtDay(busiest.day) : "—"}
@@ -369,7 +375,7 @@ export default function StatsView({ slug = null }) {
         <div className="tile">
           <div className="tile-head">
             <span className="tile-label">Top country</span>
-            <span className="tile-icon" aria-hidden="true">🌍</span>
+            <span className="tile-icon"><IconGlobe size={15} /></span>
           </div>
           <span className="tile-value tile-small">
             {bestCountry ? (
@@ -387,7 +393,7 @@ export default function StatsView({ slug = null }) {
         <div className="tile">
           <div className="tile-head">
             <span className="tile-label">Top source</span>
-            <span className="tile-icon" aria-hidden="true">🚀</span>
+            <span className="tile-icon"><IconSend size={15} /></span>
           </div>
           <span className="tile-value tile-small">{bestSource?.name || "—"}</span>
           <span className="tile-sub">
@@ -397,7 +403,7 @@ export default function StatsView({ slug = null }) {
         <div className="tile">
           <div className="tile-head">
             <span className="tile-label">{slug ? "Top button" : "Top link"}</span>
-            <span className="tile-icon" aria-hidden="true">🏆</span>
+            <span className="tile-icon"><IconTrophy size={15} /></span>
           </div>
           <span className="tile-value tile-small">
             {slug
@@ -415,7 +421,7 @@ export default function StatsView({ slug = null }) {
       </div>
 
       <section className="card">
-        <h2><span className="card-emoji" aria-hidden="true">📈</span>Clicks over time</h2>
+        <h2><span className="ico-box"><IconTrend size={15} /></span>Clicks over time</h2>
         {total === 0 ? (
           <p className="hint">No clicks in this period.</p>
         ) : (
@@ -425,12 +431,12 @@ export default function StatsView({ slug = null }) {
 
       <div className="two-col">
         <section className="card">
-          <h2><span className="card-emoji" aria-hidden="true">📱</span>Devices</h2>
+          <h2><span className="ico-box"><IconPhone size={15} /></span>Devices</h2>
           <DeviceBreakdown rows={byDevice} total={deviceTotal} />
         </section>
 
         <section className="card">
-          <h2><span className="card-emoji" aria-hidden="true">🖥️</span>Operating system</h2>
+          <h2><span className="ico-box"><IconMonitor size={15} /></span>Operating system</h2>
           <div className="donut-row">
             <Donut data={byOS} total={total} />
             <div className="donut-legend">
@@ -450,16 +456,16 @@ export default function StatsView({ slug = null }) {
 
       <div className="two-col">
         <section className="card">
-          <h2><span className="card-emoji" aria-hidden="true">🔗</span>Traffic sources</h2>
+          <h2><span className="ico-box"><IconSend size={15} /></span>Traffic sources</h2>
           <BarList rows={bySource} color="#d55181" />
         </section>
 
         <section className="card">
-          <h2><span className="card-emoji" aria-hidden="true">🌍</span>Countries</h2>
+          <h2><span className="ico-box"><IconGlobe size={15} /></span>Countries</h2>
           <BarList
             rows={byCountry}
             keyName="code"
-            color="#9085e9"
+            color="#7c6cf6"
             icon={(r) => (
               <>
                 <Flag code={r.code} /> {countryName(r.code)}
@@ -472,10 +478,10 @@ export default function StatsView({ slug = null }) {
 
       <div className="two-col">
         <section className="card">
-          <h2><span className="card-emoji" aria-hidden="true">📲</span>Platforms</h2>
+          <h2><span className="ico-box"><IconPhone size={15} /></span>Platforms</h2>
           <BarList
             rows={platRows}
-            color={(r) => PLATFORM_COLOR[r.key] || "#9085e9"}
+            color={(r) => PLATFORM_COLOR[r.key] || "#7c6cf6"}
             icon={(r) => (
               <>
                 <span className="dot" style={{ background: PLATFORM_COLOR[r.key] }} />
@@ -487,7 +493,7 @@ export default function StatsView({ slug = null }) {
 
         {showGroups && (
           <section className="card">
-            <h2><span className="card-emoji" aria-hidden="true">🗂️</span>By group</h2>
+            <h2><span className="ico-box"><IconGrid size={15} /></span>By group</h2>
             <BarList rows={byGroup} color="#c98500" />
           </section>
         )}
@@ -495,7 +501,7 @@ export default function StatsView({ slug = null }) {
 
       {slug && meta.kind === "page" && (
         <section className="card">
-          <h2><span className="card-emoji" aria-hidden="true">🎯</span>Buttons</h2>
+          <h2><span className="ico-box"><IconTarget size={15} /></span>Buttons</h2>
           {byButton.length === 0 ? (
             <p className="hint">
               No button clicks recorded in this period.
@@ -508,7 +514,7 @@ export default function StatsView({ slug = null }) {
 
       {!slug && (
         <section className="card">
-          <h2><span className="card-emoji" aria-hidden="true">📋</span>Links &amp; pages</h2>
+          <h2><span className="ico-box"><IconList size={15} /></span>Links &amp; pages</h2>
           {byLink.length === 0 ? (
             <p className="hint">No clicks in this period.</p>
           ) : (
@@ -535,7 +541,7 @@ export default function StatsView({ slug = null }) {
                       <HBar
                         value={l.total}
                         max={Math.max(1, ...byLink.map((x) => x.total))}
-                        color="#9085e9"
+                        color="#7c6cf6"
                       />
                     </td>
                     <td><strong>{l.total}</strong></td>

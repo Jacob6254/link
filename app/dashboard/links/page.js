@@ -3,6 +3,10 @@
 // Link Manager : pages bio ET liens courts réunis, organisés par groupes.
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader, Modal, RowMenu, Toast } from "../ui";
+import {
+  IconBolt, IconChart, IconCopy, IconEdit, IconExternal, IconFolder,
+  IconLink, IconSearch, IconSparkle, IconTrash, IconChevron, IconDiscord,
+} from "../icons";
 
 const TREND_W = 60;
 const TREND_H = 20;
@@ -221,7 +225,7 @@ export default function LinkManager() {
     <main className="panel wide">
       <header className="mgr-head">
         <div>
-          <h1><span className="card-emoji" aria-hidden="true">🔗</span>Link Manager</h1>
+          <h1><span className="ico-box"><IconLink size={18} /></span>Link Manager</h1>
           <p className="hint">
             {data ? (
               <>
@@ -235,7 +239,7 @@ export default function LinkManager() {
         </div>
         <div className="mgr-actions">
           <div className="search">
-            <span aria-hidden="true">⌕</span>
+            <IconSearch className="ico" size={16} />
             <input
               placeholder="Search…"
               value={query}
@@ -243,12 +247,12 @@ export default function LinkManager() {
             />
           </div>
           <button className="ghost" onClick={() => setCreating("group")}>
-            🗂️ Group
+            <IconFolder className="ico" size={15} /> Group
           </button>
           <button className="ghost" onClick={() => setCreating("link")}>
-            ⚡ Direct link
+            <IconBolt className="ico" size={15} /> Direct link
           </button>
-          <button onClick={() => setCreating("page")}>✨ Create page</button>
+          <button onClick={() => setCreating("page")}><IconSparkle className="ico" size={15} /> Create page</button>
         </div>
       </header>
 
@@ -274,16 +278,18 @@ export default function LinkManager() {
                     setCollapsed((c) => ({ ...c, [String(section.id)]: open }))
                   }
                 >
-                  <span className={open ? "chev-icon open" : "chev-icon"}>▸</span>
+                  <span className={open ? "chev-icon open" : "chev-icon"}><IconChevron size={15} /></span>
                 </button>
                 <h2>{section.name}</h2>
                 <span className="count">{section.items.length}</span>
                 <span className="group-stat">{weekTotal} clicks · 7d</span>
                 {section.id !== null && (
                   <RowMenu>
-                    <button onClick={() => setRenameGroup({ ...section })}>Rename</button>
+                    <button onClick={() => setRenameGroup({ ...section })}>
+                      <IconEdit className="ico" size={15} />Rename
+                    </button>
                     <button className="pop-danger" onClick={() => removeGroup(section)}>
-                      Delete group
+                      <IconTrash className="ico" size={15} />Delete group
                     </button>
                   </RowMenu>
                 )}
@@ -322,7 +328,7 @@ export default function LinkManager() {
                             )}
                             {it.discord_id && (
                               <span className="chip chip-discord" title="Discord ID">
-                                <span aria-hidden="true">🎮</span> {it.discord_id}
+                                <IconDiscord size={12} /> {it.discord_id}
                               </span>
                             )}
                           </div>
@@ -352,12 +358,13 @@ export default function LinkManager() {
                         </div>
                         <a className="stats-btn" href={`/dashboard/stats/${it.slug}`}
                           title="Open analytics">
-                          <span aria-hidden="true">📊</span> Stats
+                          <IconChart className="ico" size={15} />
+                          <span className="lbl">Stats</span>
                         </a>
                         <RowMenu>
-                          <button onClick={() => copy(it.slug)}>Copy URL</button>
+                          <button onClick={() => copy(it.slug)}><IconCopy className="ico" size={15} />Copy URL</button>
                           {it.kind === "page" ? (
-                            <a href={`/dashboard/pages/${it.id}`}>Edit landing page</a>
+                            <a href={`/dashboard/pages/${it.id}`}><IconEdit className="ico" size={15} />Edit landing page</a>
                           ) : (
                             <button
                               onClick={() =>
@@ -375,7 +382,7 @@ export default function LinkManager() {
                             </button>
                           )}
                           <a href={`/${it.slug}`} target="_blank" rel="noreferrer">
-                            Open ↗
+                            <IconExternal className="ico" size={15} />Open
                           </a>
                           <div className="pop-sep">Move to</div>
                           <button onClick={() => moveTo(it, null)}>Ungrouped</button>
@@ -385,7 +392,7 @@ export default function LinkManager() {
                             </button>
                           ))}
                           <button className="pop-danger" onClick={() => removeItem(it)}>
-                            Delete
+                            <IconTrash className="ico" size={15} />Delete
                           </button>
                         </RowMenu>
                       </div>
@@ -399,7 +406,7 @@ export default function LinkManager() {
 
       {data && total === 0 && !query && (
         <div className="card empty-state">
-          <span className="empty-icon" aria-hidden="true">🚀</span>
+          <span className="empty-icon"><IconSparkle size={24} /></span>
           <h2>Nothing here yet</h2>
           <p className="hint">
             Create a landing page for your bio, or a direct link that opens straight

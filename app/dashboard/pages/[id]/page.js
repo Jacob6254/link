@@ -9,6 +9,10 @@ import {
   ANIMATIONS, FONTS, HEADER_STYLES, PRESETS, renderPageHTML, resolveTheme,
 } from "@/lib/pagerender";
 import { Loader, Modal, Toast } from "../../ui";
+import {
+  IconBack, IconButton, IconDown, IconEdit, IconExternal, IconLayers,
+  IconPage, IconPalette, IconTrash, IconType, IconUp, IconUpload,
+} from "../../icons";
 
 const NEW_BUTTON = { label: "", url: "", kind: "link" };
 
@@ -48,7 +52,7 @@ function UploadButton({ label, onUploaded, onError, className = "ghost" }) {
       />
       <button type="button" className={className} disabled={busy}
         onClick={() => inputRef.current?.click()}>
-        {busy ? "Uploading…" : label}
+        {busy ? "Uploading…" : <><IconUpload className="ico" size={14} />{label}</>}
       </button>
     </>
   );
@@ -246,14 +250,14 @@ export default function PageEditor({ params }) {
     <main className="panel editor">
       <div className="editor-head">
         <h1>
-          <a className="back" href="/dashboard/links">←</a> {page.title}
+          <a className="back" href="/dashboard/links"><IconBack size={17} /></a> {page.title}
           <a
             className="mono page-url"
             href={`/${page.slug}`}
             target="_blank"
             rel="noreferrer"
           >
-            {origin}/{page.slug} ↗
+            {origin}/{page.slug} <IconExternal size={13} />
           </a>
         </h1>
         <div className="editor-save">
@@ -267,7 +271,7 @@ export default function PageEditor({ params }) {
       <div className="editor-cols">
         <div className="editor-controls">
           <section className="card">
-            <h2><span className="card-emoji" aria-hidden="true">📄</span>Page</h2>
+            <h2><span className="ico-box"><IconPage size={15} /></span>Page</h2>
             <label className="field">
               <span>Title</span>
               <input
@@ -431,7 +435,7 @@ export default function PageEditor({ params }) {
 
           <section className="card">
             <div className="card-head">
-              <h2><span className="card-emoji" aria-hidden="true">🧱</span>Templates <span className="count">{templates.length}</span></h2>
+              <h2><span className="ico-box"><IconLayers size={15} /></span>Templates <span className="count">{templates.length}</span></h2>
               <button className="ghost" onClick={() => setSavingTpl(true)}>
                 Save current design
               </button>
@@ -474,7 +478,7 @@ export default function PageEditor({ params }) {
           </section>
 
           <section className="card">
-            <h2><span className="card-emoji" aria-hidden="true">🎨</span>Theme</h2>
+            <h2><span className="ico-box"><IconPalette size={15} /></span>Theme</h2>
             <div className="preset-grid">
               {Object.entries(PRESETS).map(([key, p]) => (
                 <button
@@ -625,19 +629,19 @@ export default function PageEditor({ params }) {
           </section>
 
           <section className="card">
-            <h2><span className="card-emoji" aria-hidden="true">🔲</span>Buttons <span className="count">{buttons.length}</span></h2>
+            <h2><span className="ico-box"><IconButton size={15} /></span>Buttons <span className="count">{buttons.length}</span></h2>
             <div className="seg">
               <button
                 className={newBtn.kind === "link" ? "seg-btn active" : "seg-btn"}
                 onClick={() => setNewBtn({ ...newBtn, kind: "link" })}
               >
-                🔘 Button
+                <IconButton className="ico" size={15} /> Button
               </button>
               <button
                 className={newBtn.kind === "heading" ? "seg-btn active" : "seg-btn"}
                 onClick={() => setNewBtn({ ...newBtn, kind: "heading" })}
               >
-                ✏️ Text heading
+                <IconType className="ico" size={15} /> Text heading
               </button>
             </div>
             <div className="form-row">
@@ -775,9 +779,9 @@ export default function PageEditor({ params }) {
                     </div>
                     <div className="actions">
                       <button className="ghost move" disabled={i === 0}
-                        onClick={() => moveButton(i, -1)} title="Move up">↑</button>
+                        onClick={() => moveButton(i, -1)} title="Move up"><IconUp size={14} /></button>
                       <button className="ghost move" disabled={i === buttons.length - 1}
-                        onClick={() => moveButton(i, 1)} title="Move down">↓</button>
+                        onClick={() => moveButton(i, 1)} title="Move down"><IconDown size={14} /></button>
                       <button className="ghost"
                         onClick={() => {
                           setEditBtnId(b.id);
@@ -787,10 +791,10 @@ export default function PageEditor({ params }) {
                             icon: b.icon || "", kind: b.kind || "link",
                           });
                         }}>
-                        Edit
+                        <IconEdit className="ico" size={14} />Edit
                       </button>
                       <button className="danger" onClick={() => removeButton(b.id, b.label)}>
-                        Delete
+                        <IconTrash className="ico" size={14} />Delete
                       </button>
                     </div>
                   </li>

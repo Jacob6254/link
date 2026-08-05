@@ -1,14 +1,15 @@
 // app/dashboard/sidebar.js
 "use client";
 import { usePathname } from "next/navigation";
+import { IconChart, IconLink, IconPower, IconUsers } from "./icons";
 
 const NAV = [
-  { href: "/dashboard/links", label: "Links", icon: "🔗", match: ["/dashboard/links", "/dashboard/pages"] },
-  { href: "/dashboard/stats", label: "Analytics", icon: "📊", match: ["/dashboard/stats"] },
+  { href: "/dashboard/links", label: "Links", Icon: IconLink, match: ["/dashboard/links", "/dashboard/pages"] },
+  { href: "/dashboard/stats", label: "Analytics", Icon: IconChart, match: ["/dashboard/stats"] },
 ];
 
 const ADMIN_NAV = [
-  { href: "/dashboard/profiles", label: "Profiles", icon: "👥", match: ["/dashboard/profiles"] },
+  { href: "/dashboard/profiles", label: "Profiles", Icon: IconUsers, match: ["/dashboard/profiles"] },
 ];
 
 export default function Sidebar({ role, username }) {
@@ -23,16 +24,12 @@ export default function Sidebar({ role, username }) {
       </a>
 
       <nav className="sidebar-nav">
-        {items.map((item) => {
-          const active = item.match.some((m) => pathname.startsWith(m));
+        {items.map(({ href, label, Icon, match }) => {
+          const active = match.some((m) => pathname.startsWith(m));
           return (
-            <a
-              key={item.href}
-              href={item.href}
-              className={active ? "nav-item active" : "nav-item"}
-            >
-              <span className="nav-icon" aria-hidden="true">{item.icon}</span>
-              <span className="nav-label">{item.label}</span>
+            <a key={href} href={href} className={active ? "nav-item active" : "nav-item"}>
+              <Icon className="ico" size={18} />
+              <span className="nav-label">{label}</span>
             </a>
           );
         })}
@@ -44,7 +41,9 @@ export default function Sidebar({ role, username }) {
             {(username[0] || "?").toUpperCase()}
           </span>
           <span className="nav-label user-name">{username}</span>
-          <a className="logout-icon" href="/api/logout" title="Sign out">⏻</a>
+          <a className="logout-icon" href="/api/logout" title="Sign out">
+            <IconPower className="ico" size={17} />
+          </a>
         </div>
       </div>
     </aside>

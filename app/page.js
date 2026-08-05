@@ -1,6 +1,7 @@
 // app/page.js
 // Landing publique : présentation du service + connexion.
 import LoginForm from "./login-form";
+import { IconBolt, IconChart, IconGrid } from "./dashboard/icons";
 
 export const metadata = {
   title: "AllMySocials — links that open the app",
@@ -10,17 +11,17 @@ export const metadata = {
 
 const FEATURES = [
   {
-    icon: "⚡",
+    Icon: IconBolt,
     title: "Opens the real app",
     text: "Instagram, TikTok, YouTube, X, Snapchat, Twitch and more open in their native app — not the cramped in-app browser.",
   },
   {
-    icon: "📊",
+    Icon: IconChart,
     title: "Analytics that matter",
     text: "Clicks by day, country and platform. See which link actually brings people in, and from where.",
   },
   {
-    icon: "🗂️",
+    Icon: IconGrid,
     title: "Organised, not messy",
     text: "Group your links, rename groups on the fly, and manage everything from one clean dashboard.",
   },
@@ -52,7 +53,7 @@ export default function Landing() {
           <ul className="features">
             {FEATURES.map((f) => (
               <li key={f.title}>
-                <span className="feature-icon" aria-hidden="true">{f.icon}</span>
+                <span className="feature-icon"><f.Icon size={17} /></span>
                 <div>
                   <strong>{f.title}</strong>
                   <p>{f.text}</p>

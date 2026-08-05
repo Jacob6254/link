@@ -3,6 +3,7 @@
 // Gestion des profils (admins uniquement — le middleware bloque les autres).
 import { useCallback, useEffect, useState } from "react";
 import { Loader } from "../ui";
+import { IconPlus, IconTrash, IconUsers } from "../icons";
 
 export default function ProfilesPage() {
   const [users, setUsers] = useState(null);
@@ -54,10 +55,10 @@ export default function ProfilesPage() {
 
   return (
     <main className="panel">
-      <h1><span className="card-emoji" aria-hidden="true">👥</span>Profiles</h1>
+      <h1><span className="ico-box"><IconUsers size={18} /></span>Profiles</h1>
 
       <section className="card">
-        <h2><span className="card-emoji" aria-hidden="true">➕</span>Create a profile</h2>
+        <h2><span className="ico-box"><IconPlus size={15} /></span>Create a profile</h2>
         <div className="form-row">
           <input
             placeholder="Username (e.g. paul)"
@@ -103,7 +104,7 @@ export default function ProfilesPage() {
               </div>
               <div className="actions">
                 <button className="danger" onClick={() => removeUser(u.id, u.username)}>
-                  Delete
+                  <IconTrash className="ico" size={14} />Delete
                 </button>
               </div>
             </li>
