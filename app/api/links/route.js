@@ -1,6 +1,6 @@
 // app/api/links/route.js
 // Liens : chaque profil gère les siens ; les admins voient tout.
-import { sb, isMissingSchema, migrationError } from "@/lib/db";
+import { sb, sbFallback, isMissingSchema, migrationError } from "@/lib/db";
 import { requireUser, unauthorized } from "@/lib/auth";
 import { validateLink } from "@/lib/golink";
 import { slugTaken } from "@/lib/slugs";
@@ -13,9 +13,10 @@ export async function GET(request) {
   const filter =
     session.role === "admin" ? "" : `&owner=eq.${encodeURIComponent(session.username)}`;
   try {
-    const links = await sb(
-      `/links?select=id,slug,label,web_url,group_id,owner,sort_order&order=sort_order.asc,id.asc${filter}`
-    );
+    const links = await sbFallback([
+      `/links?select=id,slug,label,web_url,group_id,owner,discord_id,sort_order&order=sort_order.asc,id.asc${filter}`,
+      `/links?select=id,slug,label,web_url,group_id,owner,sort_order&order=sort_order.asc,id.asc${filter}`,
+    ]);
     return Response.json(links);
   } catch (err) {
     if (isMissingSchema(err)) return migrationError();
@@ -48,11 +49,13 @@ export async function POST(request) {
         web_url,
         group_id,
         owner: session.username,
+        discord_id: String(body.discord_id || "").trim().slice(0, 32) || null,
         sort_order: body.sort_order ?? 0,
       }),
     });
     return Response.json(created[0], { status: 201 });
   } catch (err) {
+    if (isMissingSchema(err)) return migrationError();
     const msg = String(err.message || "");
     if (msg.includes("23505") || msg.includes("duplicate")) {
       return Response.json({ error: "That slug is already taken" }, { status: 409 });

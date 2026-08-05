@@ -1,6 +1,6 @@
 // app/api/pages/[id]/route.js
 // Lire / modifier / supprimer une page bio : propriétaire ou admin.
-import { sb, isMissingSchema, migrationError } from "@/lib/db";
+import { sb, sbFallback, isMissingSchema, migrationError } from "@/lib/db";
 import { requireUser, unauthorized } from "@/lib/auth";
 import { RESERVED_SLUGS } from "@/lib/golink";
 import { slugTaken } from "@/lib/slugs";
@@ -16,9 +16,11 @@ export async function GET(request, { params }) {
   if (check.error) return Response.json({ error: check.error }, { status: check.status });
 
   try {
-    const buttons = await sb(
-      `/page_buttons?page_id=eq.${id}&select=id,label,url,image,animation,sort_order&order=sort_order.asc,id.asc`
-    );
+    const buttons = await sbFallback([
+      `/page_buttons?page_id=eq.${id}&select=id,label,url,image,animation,icon,kind,sort_order&order=sort_order.asc,id.asc`,
+      `/page_buttons?page_id=eq.${id}&select=id,label,url,image,animation,sort_order&order=sort_order.asc,id.asc`,
+      `/page_buttons?page_id=eq.${id}&select=id,label,url,sort_order&order=sort_order.asc,id.asc`,
+    ]);
     return Response.json({ ...check.page, buttons });
   } catch (err) {
     if (isMissingSchema(err)) return migrationError();
@@ -68,6 +70,9 @@ export async function PATCH(request, { params }) {
   if (body.theme !== undefined) {
     patch.theme = sanitizeTheme(body.theme);
   }
+  if (body.discord_id !== undefined) {
+    patch.discord_id = String(body.discord_id || "").trim().slice(0, 32) || null;
+  }
   if (body.group_id !== undefined) {
     patch.group_id = body.group_id ? Number(body.group_id) : null;
   }
@@ -75,12 +80,17 @@ export async function PATCH(request, { params }) {
     return Response.json({ error: "Nothing to update" }, { status: 400 });
   }
 
-  const updated = await sb(`/pages?id=eq.${id}`, {
-    method: "PATCH",
-    headers: { Prefer: "return=representation" },
-    body: JSON.stringify(patch),
-  });
-  return Response.json(updated[0]);
+  try {
+    const updated = await sb(`/pages?id=eq.${id}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify(patch),
+    });
+    return Response.json(updated[0]);
+  } catch (err) {
+    if (isMissingSchema(err)) return migrationError();
+    throw err;
+  }
 }
 
 export async function DELETE(request, { params }) {

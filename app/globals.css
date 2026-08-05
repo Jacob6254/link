@@ -904,3 +904,131 @@ h1 .card-emoji { width: 36px; height: 36px; font-size: 1.15rem; vertical-align: 
   70% { width: 82%; opacity: 1; }
   100% { width: 100%; opacity: 0; }
 }
+
+/* ===================================================================
+   Ajouts v8 : Discord, bouton stats, sélecteur segmenté, effets
+   =================================================================== */
+
+.opt {
+  font-weight: 500; text-transform: none; letter-spacing: 0;
+  color: var(--dim); font-size: 0.72rem;
+}
+
+.chip-discord {
+  color: #a9b4ff; border-color: rgba(114, 137, 218, 0.5);
+  background: rgba(114, 137, 218, 0.14);
+  font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.68rem;
+}
+
+/* Bouton Stats directement dans la ligne */
+.stats-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 13px; border-radius: var(--r-sm);
+  background: var(--accent-soft); border: 1px solid rgba(139, 92, 246, 0.35);
+  color: var(--accent-strong); text-decoration: none;
+  font-size: 0.82rem; font-weight: 650; white-space: nowrap;
+  transition: background 0.16s var(--ease), transform 0.16s var(--ease),
+              box-shadow 0.16s var(--ease);
+}
+.stats-btn:hover {
+  background: var(--accent); color: #fff; transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(139, 92, 246, 0.35);
+}
+.stats-btn:active { transform: translateY(0); }
+@media (max-width: 720px) { .stats-btn span { display: none; } }
+
+/* Sélecteur segmenté (type de bloc) */
+.seg {
+  display: inline-flex; gap: 3px; padding: 3px; margin-bottom: 12px;
+  background: var(--bg-deep); border: 1px solid var(--border); border-radius: 11px;
+}
+.seg-btn {
+  background: transparent; color: var(--muted); border: none;
+  padding: 8px 15px; border-radius: 8px; font-size: 0.85rem; font-weight: 600;
+  transition: background 0.18s var(--ease), color 0.18s var(--ease);
+}
+.seg-btn:hover { background: var(--card-hover); color: var(--text); box-shadow: none; }
+.seg-btn.active { background: var(--accent); color: #fff; }
+
+.badge-color { max-width: 180px; margin: 10px 0 4px; }
+
+/* ===== Effets supplémentaires ===== */
+
+/* Halo qui suit les cartes au survol */
+.card {
+  position: relative;
+  transition: transform 0.22s var(--ease), border-color 0.22s var(--ease),
+              box-shadow 0.22s var(--ease);
+}
+.card:hover {
+  border-color: #3a3168;
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.34), 0 0 0 1px rgba(139, 92, 246, 0.12);
+}
+
+/* Le point de la marque respire en continu */
+.brand-dot { animation: brandBreath 3.2s ease-in-out infinite; }
+@keyframes brandBreath {
+  0%, 100% { box-shadow: 0 0 10px rgba(139, 92, 246, 0.6); transform: scale(1); }
+  50% { box-shadow: 0 0 20px rgba(139, 92, 246, 1); transform: scale(1.12); }
+}
+
+/* Onde au clic sur les boutons pleins */
+button:not(.ghost):not(.danger):not(.icon-btn):not(.seg-btn):not(.range-btn):not(.chev) {
+  position: relative; overflow: hidden;
+}
+button:not(.ghost):not(.danger):not(.icon-btn):not(.seg-btn):not(.range-btn):not(.chev)::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit;
+  background: radial-gradient(circle, rgba(255,255,255,0.45), transparent 60%);
+  opacity: 0; transform: scale(0.2);
+}
+button:not(.ghost):not(.danger):not(.icon-btn):not(.seg-btn):not(.range-btn):not(.chev):active::after {
+  animation: ripple 0.5s var(--ease);
+}
+@keyframes ripple {
+  from { opacity: 0.6; transform: scale(0.2); }
+  to { opacity: 0; transform: scale(1.6); }
+}
+
+/* Les lignes du manager arrivent en cascade */
+.rows > li { animation: rowIn 0.4s var(--ease) both; }
+.rows > li:nth-child(1) { animation-delay: 0.03s; }
+.rows > li:nth-child(2) { animation-delay: 0.07s; }
+.rows > li:nth-child(3) { animation-delay: 0.11s; }
+.rows > li:nth-child(4) { animation-delay: 0.15s; }
+.rows > li:nth-child(5) { animation-delay: 0.19s; }
+.rows > li:nth-child(n+6) { animation-delay: 0.23s; }
+@keyframes rowIn { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
+
+/* L'avatar de la ligne réagit */
+.row-av { transition: transform 0.22s var(--spring); }
+.row:hover .row-av { transform: scale(1.1) rotate(-3deg); }
+
+/* Le titre de la page glisse à l'arrivée */
+.panel > h1, .mgr-head, .editor-head { animation: fadeUp 0.45s var(--ease) both; }
+
+/* La barre de recherche s'élargit avec douceur */
+.search input { transition: width 0.25s var(--ease), border-color 0.16s var(--ease), box-shadow 0.16s var(--ease); }
+
+/* Les presets de thème s'animent à l'arrivée */
+.preset { animation: popIn 0.4s var(--ease) both; }
+.preset:nth-child(2) { animation-delay: 0.04s; }
+.preset:nth-child(3) { animation-delay: 0.08s; }
+.preset:nth-child(4) { animation-delay: 0.12s; }
+.preset:nth-child(5) { animation-delay: 0.16s; }
+.preset:nth-child(6) { animation-delay: 0.20s; }
+
+/* Le téléphone d'aperçu flotte doucement */
+.phone { transition: transform 0.3s var(--ease), box-shadow 0.3s var(--ease); }
+.editor-preview:hover .phone {
+  transform: translateY(-4px);
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(139, 92, 246, 0.25);
+}
+
+/* Les vignettes de template basculent au survol */
+.tpl-swatch { transition: transform 0.2s var(--spring), border-color 0.2s var(--ease); }
+.tpl-swatch:hover { transform: translateY(-3px) rotate(-1.5deg); }
+
+/* Les liens de la sidebar poussent leur icône */
+.nav-icon { transition: transform 0.22s var(--spring); display: inline-block; }
+.nav-item:hover .nav-icon { transform: scale(1.2); }
+.nav-item.active .nav-icon { transform: scale(1.1); }

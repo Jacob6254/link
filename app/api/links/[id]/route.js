@@ -1,6 +1,6 @@
 // app/api/links/[id]/route.js
 // Modification / suppression d'un lien : propriétaire ou admin uniquement.
-import { sb } from "@/lib/db";
+import { sb, isMissingSchema, migrationError } from "@/lib/db";
 import { requireUser, unauthorized } from "@/lib/auth";
 import { validateLink } from "@/lib/golink";
 import { slugTaken } from "@/lib/slugs";
@@ -41,10 +41,16 @@ export async function PATCH(request, { params }) {
     const updated = await sb(`/links?id=eq.${id}`, {
       method: "PATCH",
       headers: { Prefer: "return=representation" },
-      body: JSON.stringify({ slug, label, web_url, group_id }),
+      body: JSON.stringify({
+        slug, label, web_url, group_id,
+        ...(body.discord_id !== undefined
+          ? { discord_id: String(body.discord_id || "").trim().slice(0, 32) || null }
+          : {}),
+      }),
     });
     return Response.json(updated[0]);
   } catch (err) {
+    if (isMissingSchema(err)) return migrationError();
     const msg = String(err.message || "");
     if (msg.includes("23505") || msg.includes("duplicate")) {
       return Response.json({ error: "That slug is already taken" }, { status: 409 });

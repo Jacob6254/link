@@ -6,11 +6,11 @@
 // L'aperçu utilise le MÊME moteur de rendu que la page publique (iframe).
 import { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ANIMATIONS, FONTS, PRESETS, renderPageHTML, resolveTheme,
+  ANIMATIONS, FONTS, HEADER_STYLES, PRESETS, renderPageHTML, resolveTheme,
 } from "@/lib/pagerender";
 import { Loader, Modal, Toast } from "../../ui";
 
-const NEW_BUTTON = { label: "", url: "" };
+const NEW_BUTTON = { label: "", url: "", kind: "link" };
 
 async function uploadFile(file) {
   const fd = new FormData();
@@ -167,6 +167,7 @@ export default function PageEditor({ params }) {
         title: page.title,
         tagline: page.tagline || "",
         avatar: page.avatar || "",
+        discord_id: page.discord_id || "",
         theme: page.theme,
       }),
     });
@@ -282,13 +283,23 @@ export default function PageEditor({ params }) {
                 onChange={(e) => patchLocal({ tagline: e.target.value })}
               />
             </label>
-            <label className="field">
-              <span>Slug</span>
-              <input
-                value={page.slug || ""}
-                onChange={(e) => patchLocal({ slug: e.target.value })}
-              />
-            </label>
+            <div className="form-row">
+              <label className="field">
+                <span>Slug</span>
+                <input
+                  value={page.slug || ""}
+                  onChange={(e) => patchLocal({ slug: e.target.value })}
+                />
+              </label>
+              <label className="field">
+                <span>Discord ID <span className="opt">optional</span></span>
+                <input
+                  placeholder="1423561938570444893"
+                  value={page.discord_id || ""}
+                  onChange={(e) => patchLocal({ discord_id: e.target.value })}
+                />
+              </label>
+            </div>
             <div className="field">
               <span className="field-label">Avatar</span>
               <div className="upload-row">
@@ -377,6 +388,45 @@ export default function PageEditor({ params }) {
               />
               <span>Verified badge next to the title</span>
             </label>
+            {page.theme?.titleBadge && (
+              <label className="field color-field badge-color">
+                <span>Badge colour</span>
+                <input
+                  type="color"
+                  value={theme.badgeColor}
+                  onChange={(e) => patchTheme({ badgeColor: e.target.value })}
+                />
+              </label>
+            )}
+
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={!!page.theme?.online}
+                onChange={(e) => patchTheme({ online: e.target.checked })}
+              />
+              <span>Show an “online” pill</span>
+            </label>
+            <div className="theme-controls">
+              {page.theme?.online && (
+                <label className="field">
+                  <span>Online text</span>
+                  <input
+                    placeholder="Online"
+                    value={theme.onlineText}
+                    onChange={(e) => patchTheme({ onlineText: e.target.value })}
+                  />
+                </label>
+              )}
+              <label className="field">
+                <span>Location <span className="opt">optional</span></span>
+                <input
+                  placeholder="Paris"
+                  value={theme.location}
+                  onChange={(e) => patchTheme({ location: e.target.value })}
+                />
+              </label>
+            </div>
           </section>
 
           <section className="card">
@@ -478,6 +528,17 @@ export default function PageEditor({ params }) {
                 />
               </label>
               <label className="field">
+                <span>Header style</span>
+                <select
+                  value={theme.headerStyle}
+                  onChange={(e) => patchTheme({ headerStyle: e.target.value })}
+                >
+                  {Object.entries(HEADER_STYLES).map(([key, label]) => (
+                    <option key={key} value={key}>{label}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="field">
                 <span>Font</span>
                 <select
                   value={theme.font}
@@ -565,18 +626,39 @@ export default function PageEditor({ params }) {
 
           <section className="card">
             <h2><span className="card-emoji" aria-hidden="true">🔲</span>Buttons <span className="count">{buttons.length}</span></h2>
+            <div className="seg">
+              <button
+                className={newBtn.kind === "link" ? "seg-btn active" : "seg-btn"}
+                onClick={() => setNewBtn({ ...newBtn, kind: "link" })}
+              >
+                🔘 Button
+              </button>
+              <button
+                className={newBtn.kind === "heading" ? "seg-btn active" : "seg-btn"}
+                onClick={() => setNewBtn({ ...newBtn, kind: "heading" })}
+              >
+                ✏️ Text heading
+              </button>
+            </div>
             <div className="form-row">
               <input
-                placeholder="Button label (e.g. My Instagram)"
+                placeholder={
+                  newBtn.kind === "heading"
+                    ? "Heading text (e.g. ▼ ANSWER HERE ▼)"
+                    : "Button label (e.g. My Instagram)"
+                }
                 value={newBtn.label}
                 onChange={(e) => setNewBtn({ ...newBtn, label: e.target.value })}
+                onKeyDown={(e) => e.key === "Enter" && newBtn.kind === "heading" && addButton()}
               />
-              <input
-                placeholder="https://…"
-                value={newBtn.url}
-                onChange={(e) => setNewBtn({ ...newBtn, url: e.target.value })}
-                onKeyDown={(e) => e.key === "Enter" && addButton()}
-              />
+              {newBtn.kind === "link" && (
+                <input
+                  placeholder="https://…"
+                  value={newBtn.url}
+                  onChange={(e) => setNewBtn({ ...newBtn, url: e.target.value })}
+                  onKeyDown={(e) => e.key === "Enter" && addButton()}
+                />
+              )}
               <button onClick={addButton}>Add</button>
             </div>
             <p className="hint">
@@ -594,10 +676,12 @@ export default function PageEditor({ params }) {
                         value={editBtn.label}
                         onChange={(e) => setEditBtn({ ...editBtn, label: e.target.value })}
                       />
-                      <input
-                        value={editBtn.url}
-                        onChange={(e) => setEditBtn({ ...editBtn, url: e.target.value })}
-                      />
+                      {editBtn.kind !== "heading" && (
+                        <input
+                          value={editBtn.url}
+                          onChange={(e) => setEditBtn({ ...editBtn, url: e.target.value })}
+                        />
+                      )}
                     </div>
                     <div className="form-row">
                       <label className="field">
@@ -611,6 +695,37 @@ export default function PageEditor({ params }) {
                           ))}
                         </select>
                       </label>
+                      <label className="field">
+                        <span>Icon <span className="opt">emoji or upload</span></span>
+                        <div className="upload-row">
+                          {editBtn.icon && (
+                            /^https?:\/\//i.test(editBtn.icon) ? (
+                              /* eslint-disable-next-line @next/next/no-img-element */
+                              <img className="thumb" src={editBtn.icon} alt="" />
+                            ) : (
+                              <span className="thumb thumb-text">{editBtn.icon}</span>
+                            )
+                          )}
+                          <input
+                            className="grow"
+                            placeholder="📸"
+                            value={/^https?:\/\//i.test(editBtn.icon || "") ? "" : editBtn.icon || ""}
+                            onChange={(e) => setEditBtn({ ...editBtn, icon: e.target.value })}
+                          />
+                          <UploadButton
+                            label="Upload"
+                            onUploaded={(url) => setEditBtn({ ...editBtn, icon: url })}
+                            onError={setError}
+                          />
+                          {editBtn.icon && (
+                            <button className="ghost"
+                              onClick={() => setEditBtn({ ...editBtn, icon: "" })}>
+                              Clear
+                            </button>
+                          )}
+                        </div>
+                      </label>
+
                       <div className="field">
                         <span className="field-label">Background photo</span>
                         <div className="upload-row">
@@ -646,11 +761,16 @@ export default function PageEditor({ params }) {
                       )}
                       <div>
                         <strong>{b.label}</strong>
+                        {b.kind === "heading" && <span className="badge">heading</span>}
                         {b.animation && b.animation !== "none" && (
                           <span className="badge">{ANIMATIONS[b.animation]}</span>
                         )}
-                        <br />
-                        <span className="hint">{b.url}</span>
+                        {b.kind !== "heading" && (
+                          <>
+                            <br />
+                            <span className="hint">{b.url}</span>
+                          </>
+                        )}
                       </div>
                     </div>
                     <div className="actions">
@@ -664,6 +784,7 @@ export default function PageEditor({ params }) {
                           setEditBtn({
                             label: b.label, url: b.url,
                             image: b.image || "", animation: b.animation || "none",
+                            icon: b.icon || "", kind: b.kind || "link",
                           });
                         }}>
                         Edit

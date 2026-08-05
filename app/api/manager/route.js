@@ -14,28 +14,35 @@ export async function GET(request) {
   const mine =
     session.role === "admin" ? "" : `&owner=eq.${encodeURIComponent(session.username)}`;
 
+  // Le manager est l'écran principal : il doit s'afficher même si les
+  // dernières colonnes ne sont pas encore migrées. On dégrade au lieu d'échouer.
+  async function withFallback(queries) {
+    for (let i = 0; i < queries.length; i++) {
+      try {
+        return await sb(queries[i]);
+      } catch (err) {
+        if (!isMissingSchema(err) || i === queries.length - 1) throw err;
+      }
+    }
+  }
+
   let groups, links, pages;
   try {
     groups = await sb("/groups?select=id,name,sort_order&order=sort_order.asc,id.asc");
-    links = await sb(
-      `/links?select=id,slug,label,web_url,group_id,owner&order=sort_order.asc,id.asc${mine}`
-    );
+    links = await withFallback([
+      `/links?select=id,slug,label,web_url,group_id,owner,discord_id&order=sort_order.asc,id.asc${mine}`,
+      `/links?select=id,slug,label,web_url,group_id,owner&order=sort_order.asc,id.asc${mine}`,
+    ]);
   } catch (err) {
     if (isMissingSchema(err)) return migrationError();
     throw err;
   }
 
-  try {
-    pages = await sb(
-      `/pages?select=id,slug,title,tagline,avatar,group_id,owner&order=id.asc${mine}`
-    );
-  } catch (err) {
-    if (!isMissingSchema(err)) throw err;
-    // Colonne group_id (v5) pas encore migrée : les pages restent "ungrouped".
-    pages = await sb(
-      `/pages?select=id,slug,title,tagline,avatar,owner&order=id.asc${mine}`
-    );
-  }
+  pages = await withFallback([
+    `/pages?select=id,slug,title,tagline,avatar,group_id,owner,discord_id&order=id.asc${mine}`,
+    `/pages?select=id,slug,title,tagline,avatar,group_id,owner&order=id.asc${mine}`,
+    `/pages?select=id,slug,title,tagline,avatar,owner&order=id.asc${mine}`,
+  ]);
 
   // Clics des 7 derniers jours, agrégés par slug.
   const since = new Date(Date.now() - TREND_DAYS * 24 * 3600 * 1000).toISOString();
@@ -96,6 +103,7 @@ export async function GET(request) {
       avatar: p.avatar || null,
       group_id: p.group_id,
       owner: p.owner,
+      discord_id: p.discord_id || null,
       stats: statFor(p.slug),
     })),
     ...links.map((l) => ({
@@ -108,6 +116,7 @@ export async function GET(request) {
       avatar: null,
       group_id: l.group_id,
       owner: l.owner,
+      discord_id: l.discord_id || null,
       stats: statFor(l.slug),
     })),
   ];

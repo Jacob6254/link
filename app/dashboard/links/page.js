@@ -29,8 +29,8 @@ function Trend({ byDay }) {
   );
 }
 
-const NEW_PAGE = { slug: "", title: "" };
-const NEW_LINK = { slug: "", label: "", web_url: "" };
+const NEW_PAGE = { slug: "", title: "", discord_id: "" };
+const NEW_LINK = { slug: "", label: "", web_url: "", discord_id: "" };
 
 export default function LinkManager() {
   const [data, setData] = useState(null);
@@ -199,7 +199,7 @@ export default function LinkManager() {
   }
 
   async function removeItem(item) {
-    const what = item.kind === "page" ? "page and all its buttons" : "direct link";
+    const what = item.kind === "page" ? "landing page and all its buttons" : "direct link";
     if (!confirm(`Delete “${item.title}”? This removes the ${what}.`)) return;
     const url = item.kind === "page" ? `/api/pages/${item.id}` : `/api/links/${item.id}`;
     await api(url, { method: "DELETE" }, "Deleted");
@@ -293,7 +293,7 @@ export default function LinkManager() {
                 <ul className="rows">
                   {section.items.length === 0 && (
                     <li className="row-empty hint">
-                      Nothing here yet — create a page or a direct link.
+                      Nothing here yet — create a landing page or a direct link.
                     </li>
                   )}
                   {section.items.map((it) => (
@@ -315,10 +315,15 @@ export default function LinkManager() {
                           <div className="row-title">
                             <strong>{it.title}</strong>
                             <span className={`chip chip-${it.kind}`}>
-                              {it.kind === "page" ? "Page" : "Direct"}
+                              {it.kind === "page" ? "Landing page" : "Direct"}
                             </span>
                             {it.owner && data.groups && (
                               <span className="chip chip-dim">{it.owner}</span>
+                            )}
+                            {it.discord_id && (
+                              <span className="chip chip-discord" title="Discord ID">
+                                <span aria-hidden="true">🎮</span> {it.discord_id}
+                              </span>
                             )}
                           </div>
                           <a
@@ -345,10 +350,14 @@ export default function LinkManager() {
                           <span className="metric-value">{it.stats.week}</span>
                           <span className="metric-label">7 days</span>
                         </div>
+                        <a className="stats-btn" href={`/dashboard/stats/${it.slug}`}
+                          title="Open analytics">
+                          <span aria-hidden="true">📊</span> Stats
+                        </a>
                         <RowMenu>
                           <button onClick={() => copy(it.slug)}>Copy URL</button>
                           {it.kind === "page" ? (
-                            <a href={`/dashboard/pages/${it.id}`}>Edit page</a>
+                            <a href={`/dashboard/pages/${it.id}`}>Edit landing page</a>
                           ) : (
                             <button
                               onClick={() =>
@@ -358,13 +367,13 @@ export default function LinkManager() {
                                   label: it.title,
                                   web_url: it.web_url,
                                   group_id: it.group_id || "",
+                                  discord_id: it.discord_id || "",
                                 })
                               }
                             >
                               Edit link
                             </button>
                           )}
-                          <a href={`/dashboard/stats/${it.slug}`}>View stats</a>
                           <a href={`/${it.slug}`} target="_blank" rel="noreferrer">
                             Open ↗
                           </a>
@@ -426,6 +435,14 @@ export default function LinkManager() {
               onKeyDown={(e) => e.key === "Enter" && createPage()}
             />
           </label>
+          <label className="field">
+            <span>Discord ID <span className="opt">optional</span></span>
+            <input
+              placeholder="1423561938570444893"
+              value={pageForm.discord_id}
+              onChange={(e) => setPageForm({ ...pageForm, discord_id: e.target.value })}
+            />
+          </label>
           <p className="hint">
             Will live at{" "}
             <span className="mono">
@@ -467,6 +484,14 @@ export default function LinkManager() {
               value={linkForm.slug}
               onChange={(e) => setLinkForm({ ...linkForm, slug: e.target.value })}
               onKeyDown={(e) => e.key === "Enter" && createLink()}
+            />
+          </label>
+          <label className="field">
+            <span>Discord ID <span className="opt">optional</span></span>
+            <input
+              placeholder="1423561938570444893"
+              value={linkForm.discord_id}
+              onChange={(e) => setLinkForm({ ...linkForm, discord_id: e.target.value })}
             />
           </label>
           <p className="hint">
@@ -522,6 +547,14 @@ export default function LinkManager() {
             <input
               value={editLink.slug}
               onChange={(e) => setEditLink({ ...editLink, slug: e.target.value })}
+            />
+          </label>
+          <label className="field">
+            <span>Discord ID <span className="opt">optional</span></span>
+            <input
+              placeholder="1423561938570444893"
+              value={editLink.discord_id || ""}
+              onChange={(e) => setEditLink({ ...editLink, discord_id: e.target.value })}
               onKeyDown={(e) => e.key === "Enter" && saveLink()}
             />
           </label>

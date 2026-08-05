@@ -1,6 +1,6 @@
 // app/api/pages/route.js
 // Pages bio : chaque profil gère les siennes ; les admins voient tout.
-import { sb, isMissingSchema, migrationError } from "@/lib/db";
+import { sb, sbFallback, isMissingSchema, migrationError } from "@/lib/db";
 import { requireUser, unauthorized } from "@/lib/auth";
 import { RESERVED_SLUGS } from "@/lib/golink";
 import { slugTaken } from "@/lib/slugs";
@@ -14,9 +14,10 @@ export async function GET(request) {
   const filter =
     session.role === "admin" ? "" : `&owner=eq.${encodeURIComponent(session.username)}`;
   try {
-    const pages = await sb(
-      `/pages?select=id,slug,title,tagline,avatar,owner&order=id.asc${filter}`
-    );
+    const pages = await sbFallback([
+      `/pages?select=id,slug,title,tagline,avatar,owner,discord_id&order=id.asc${filter}`,
+      `/pages?select=id,slug,title,tagline,avatar,owner&order=id.asc${filter}`,
+    ]);
     return Response.json(pages);
   } catch (err) {
     if (isMissingSchema(err)) return migrationError();
@@ -55,6 +56,7 @@ export async function POST(request) {
         slug,
         title,
         owner: session.username,
+        discord_id: String(body.discord_id || "").trim().slice(0, 32) || null,
         theme: DEFAULT_THEME,
       }),
     });

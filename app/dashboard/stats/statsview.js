@@ -298,7 +298,7 @@ export default function StatsView({ slug = null }) {
             {slug ? (
               <>
                 <span className={`chip chip-${meta.kind}`}>
-                  {meta.kind === "page" ? "Page" : "Direct"}
+                  {meta.kind === "page" ? "Landing page" : "Direct"}
                 </span>{" "}
                 <span className="mono">/{slug}</span> · {fmtDay(meta.from)} – {fmtDay(meta.to)}
               </>
@@ -508,7 +508,7 @@ export default function StatsView({ slug = null }) {
 
       {!slug && (
         <section className="card">
-          <h2><span className="card-emoji" aria-hidden="true">📋</span>By link</h2>
+          <h2><span className="card-emoji" aria-hidden="true">📋</span>Links &amp; pages</h2>
           {byLink.length === 0 ? (
             <p className="hint">No clicks in this period.</p>
           ) : (

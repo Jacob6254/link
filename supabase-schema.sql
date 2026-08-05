@@ -105,3 +105,9 @@ alter table public.clicks add column if not exists visit_id text;   -- relie une
 alter table public.clicks add column if not exists device text;     -- mobile | tablet | desktop
 
 create index if not exists clicks_event_idx on public.clicks (event, created_at desc);
+
+-- ===== v8 : propriétaire Discord, blocs de titre et icônes de boutons =====
+alter table public.links        add column if not exists discord_id text;
+alter table public.pages        add column if not exists discord_id text;
+alter table public.page_buttons add column if not exists kind text not null default 'link'; -- link | heading
+alter table public.page_buttons add column if not exists icon text;   -- emoji ou URL d'image
