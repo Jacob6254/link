@@ -111,3 +111,4 @@ alter table public.links        add column if not exists discord_id text;
 alter table public.pages        add column if not exists discord_id text;
 alter table public.page_buttons add column if not exists kind text not null default 'link'; -- link | heading
 alter table public.page_buttons add column if not exists icon text;   -- emoji ou URL d'image
+alter table public.page_buttons add column if not exists font text;   -- police d'un bloc de titre

@@ -17,6 +17,7 @@ export async function GET(request, { params }) {
 
   try {
     const buttons = await sbFallback([
+      `/page_buttons?page_id=eq.${id}&select=id,label,url,image,animation,icon,kind,font,sort_order&order=sort_order.asc,id.asc`,
       `/page_buttons?page_id=eq.${id}&select=id,label,url,image,animation,icon,kind,sort_order&order=sort_order.asc,id.asc`,
       `/page_buttons?page_id=eq.${id}&select=id,label,url,image,animation,sort_order&order=sort_order.asc,id.asc`,
       `/page_buttons?page_id=eq.${id}&select=id,label,url,sort_order&order=sort_order.asc,id.asc`,

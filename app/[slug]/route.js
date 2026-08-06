@@ -1,7 +1,7 @@
 // app/[slug]/route.js
 // Racine des slugs : lien court direct OU page bio (type Linktree).
 // Les pages statiques (/login, /dashboard, ...) ont priorité sur cette route.
-import { sb, isMissingSchema } from "@/lib/db";
+import { sb, sbFallback, isMissingSchema } from "@/lib/db";
 import { handleGoLink, logEvent } from "@/lib/golink";
 import { renderPageHTML } from "@/lib/pagerender";
 
@@ -21,18 +21,14 @@ export async function GET(request, { params }) {
     );
     const page = pages?.[0];
     if (page) {
-      let buttons;
-      try {
-        buttons = await sb(
-          `/page_buttons?page_id=eq.${page.id}&select=id,label,image,animation&order=sort_order.asc,id.asc`
-        );
-      } catch (err) {
-        // Colonnes v4 pas encore migrées : rendu sans images ni animations.
-        if (!isMissingSchema(err)) throw err;
-        buttons = await sb(
-          `/page_buttons?page_id=eq.${page.id}&select=id,label&order=sort_order.asc,id.asc`
-        );
-      }
+      // Le select doit couvrir TOUTES les colonnes utilisées par le rendu,
+      // sinon la page publique perd des réglages visibles dans l'éditeur.
+      const buttons = await sbFallback([
+        `/page_buttons?page_id=eq.${page.id}&select=id,label,image,animation,icon,kind,font&order=sort_order.asc,id.asc`,
+        `/page_buttons?page_id=eq.${page.id}&select=id,label,image,animation,icon,kind&order=sort_order.asc,id.asc`,
+        `/page_buttons?page_id=eq.${page.id}&select=id,label,image,animation&order=sort_order.asc,id.asc`,
+        `/page_buttons?page_id=eq.${page.id}&select=id,label&order=sort_order.asc,id.asc`,
+      ]);
       // Une visite = un identifiant, repassé aux boutons via ?v= : c'est ce
       // qui permet de calculer le taux de clic (combien de visites cliquent).
       const visitId = crypto.randomUUID().slice(0, 18);

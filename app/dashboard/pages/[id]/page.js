@@ -135,10 +135,15 @@ export default function PageEditor({ params }) {
 
   useEffect(() => { load(); }, [load]);
 
-  const previewHtml = useMemo(
-    () => (page ? renderPageHTML(page, buttons, { preview: true }) : ""),
-    [page, buttons]
-  );
+  // L'aperçu doit refléter le bouton en cours d'édition AVANT l'enregistrement,
+  // sinon on croit qu'un réglage (logo, animation, police) ne fonctionne pas.
+  const previewHtml = useMemo(() => {
+    if (!page) return "";
+    const merged = editBtnId
+      ? buttons.map((b) => (b.id === editBtnId ? { ...b, ...editBtn } : b))
+      : buttons;
+    return renderPageHTML(page, merged, { preview: true });
+  }, [page, buttons, editBtnId, editBtn]);
 
   function patchLocal(changes) {
     setPage((p) => ({ ...p, ...changes }));
@@ -533,6 +538,16 @@ export default function PageEditor({ params }) {
                 />
               </label>
               <label className="field">
+                <span>Background</span>
+                <select
+                  value={theme.flatBg ? "flat" : "gradient"}
+                  onChange={(e) => patchTheme({ flatBg: e.target.value === "flat" })}
+                >
+                  <option value="gradient">Gradient (Background 1 to 2)</option>
+                  <option value="flat">Flat - Background 2 only</option>
+                </select>
+              </label>
+              <label className="field">
                 <span>Header style</span>
                 <select
                   value={theme.headerStyle}
@@ -575,6 +590,54 @@ export default function PageEditor({ params }) {
                   <option value="outline">Outline</option>
                   <option value="glass">Glass</option>
                 </select>
+              </label>
+              <label className="field">
+                <span>Button size</span>
+                <select
+                  value={theme.btnSize}
+                  onChange={(e) => patchTheme({ btnSize: e.target.value })}
+                >
+                  <option value="sm">Small</option>
+                  <option value="md">Medium</option>
+                  <option value="lg">Large</option>
+                </select>
+              </label>
+              <label className="field">
+                <span>
+                  Corner radius{" "}
+                  {theme.btnRadius >= 0 ? `- ${theme.btnRadius}px` : "- from shape"}
+                </span>
+                <input
+                  type="range" min="-1" max="40"
+                  value={theme.btnRadius}
+                  onChange={(e) => patchTheme({ btnRadius: Number(e.target.value) })}
+                />
+              </label>
+              <label className="field">
+                <span>Border width - {theme.btnBorderWidth}px</span>
+                <input
+                  type="range" min="0" max="8"
+                  value={theme.btnBorderWidth}
+                  onChange={(e) => patchTheme({ btnBorderWidth: Number(e.target.value) })}
+                />
+              </label>
+              {theme.btnBorderWidth > 0 && (
+                <label className="field color-field">
+                  <span>Border colour</span>
+                  <input
+                    type="color"
+                    value={theme.btnBorderColor}
+                    onChange={(e) => patchTheme({ btnBorderColor: e.target.value })}
+                  />
+                </label>
+              )}
+              <label className="field">
+                <span>Banner height - {theme.btnImageHeight}px</span>
+                <input
+                  type="range" min="70" max="300" step="5"
+                  value={theme.btnImageHeight}
+                  onChange={(e) => patchTheme({ btnImageHeight: Number(e.target.value) })}
+                />
               </label>
             </div>
 
@@ -700,6 +763,21 @@ export default function PageEditor({ params }) {
                           ))}
                         </select>
                       </label>
+                      {editBtn.kind === "heading" && (
+                        <label className="field">
+                          <span>Font</span>
+                          <select
+                            value={editBtn.font || ""}
+                            onChange={(e) => setEditBtn({ ...editBtn, font: e.target.value })}
+                          >
+                            <option value="">Page font</option>
+                            {Object.entries(FONTS).map(([key, f]) => (
+                              <option key={key} value={key}>{f.name}</option>
+                            ))}
+                          </select>
+                        </label>
+                      )}
+                      {editBtn.kind !== "heading" && (
                       <div className="field">
                         <span className="field-label">
                           Icon <span className="opt">pick a logo, upload, or type an emoji</span>
@@ -743,7 +821,9 @@ export default function PageEditor({ params }) {
                           )}
                         </div>
                       </div>
+                      )}
 
+                      {editBtn.kind !== "heading" && (
                       <div className="field">
                         <span className="field-label">Background photo</span>
                         <div className="upload-row">
@@ -764,6 +844,7 @@ export default function PageEditor({ params }) {
                           )}
                         </div>
                       </div>
+                      )}
                     </div>
                     <div className="actions">
                       <button onClick={() => saveButton(b.id)}>Save</button>
@@ -803,6 +884,7 @@ export default function PageEditor({ params }) {
                             label: b.label, url: b.url,
                             image: b.image || "", animation: b.animation || "none",
                             icon: b.icon || "", kind: b.kind || "link",
+                            font: b.font || "",
                           });
                         }}>
                         <IconEdit className="ico" size={14} />Edit
