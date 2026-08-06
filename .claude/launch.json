@@ -6,6 +6,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["start"],
       "port": 3000
+    },
+    {
+      "name": "scratch-preview",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["C:/Users/V/AppData/Local/Temp/claude/E--link-in-bio/55a52a10-a59c-4d3c-85f1-321b92c4760c/scratchpad/serve.mjs"],
+      "port": 4599
     }
   ]
 }
